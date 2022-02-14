@@ -10,7 +10,6 @@ export namespace bindingConstants {
 	export const bindingValueKey = '$value';
 	export const parentValueKey = '$parent';
 	export const parentsValueKey = '$parents';
-	export const newPropertyValueKey = '$newPropertyValue';
 }
 
 const hasEqualSignRegex = /=+/;

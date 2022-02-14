@@ -322,20 +322,6 @@ export class Binding {
 		}
 	}
 
-	private prepareExpressionForUpdate(): string {
-		// this regex is used to create a valid RegExp object from a string that has some special regex symbols like [,(,$ and so on.
-		// Basically this method replaces all matches of 'source property' in expression with '$newPropertyValue'.
-		// For example: with an expression similar to:
-		// text="{{ sourceProperty = $parents['ListView'].test, expression = $parents['ListView'].test + 2}}"
-		// update expression will be '$newPropertyValue + 2'
-		// then on expression execution the new value will be taken and target property will be updated with the value of the expression.
-		const escapedSourceProperty = escapeRegexSymbols(this.options.sourceProperty);
-		const expRegex = new RegExp(escapedSourceProperty, 'g');
-		const resultExp = this.options.expression.replace(expRegex, bc.newPropertyValueKey);
-
-		return resultExp;
-	}
-
 	private updateTwoWay(value: any) {
 		if (this.updating || !this.options.twoWay) {
 			return;
@@ -344,9 +330,9 @@ export class Binding {
 		let newValue = value;
 		if (__UI_USE_EXTERNAL_RENDERER__) {
 		} else if (this.options.expression) {
+			const expression = this.options.expression;
 			const changedModel = {};
 			changedModel[bc.bindingValueKey] = value;
-			changedModel[bc.newPropertyValueKey] = value;
 			let sourcePropertyName = '';
 			if (this.sourceOptions) {
 				sourcePropertyName = this.sourceOptions.property;
@@ -358,10 +344,9 @@ export class Binding {
 				changedModel[sourcePropertyName] = value;
 			}
 
-			const updateExpression = this.prepareExpressionForUpdate();
-			this.prepareContextForExpression(changedModel, updateExpression);
+			this.prepareContextForExpression(changedModel, expression);
 
-			const expressionValue = this._getExpressionValue(updateExpression, true, changedModel);
+			const expressionValue = this._getExpressionValue(expression, true, changedModel);
 			if (expressionValue instanceof Error) {
 				Trace.write((<Error>expressionValue).message, Trace.categories.Binding, Trace.messageType.error);
 			}
@@ -387,7 +372,15 @@ export class Binding {
 				}
 
 				if (exp) {
-					context = (this.source && this.source.get && this.source.get()) || global;
+					context = this.source && this.source.get && this.source.get();
+					if (types.isNullOrUndefined(context)) {
+						context = global;
+					} else if (!types.isObject(context) || Array.isArray(context)) {
+						global[bc.bindingValueKey] = context;
+						addedProps.push(bc.bindingValueKey);
+						context = global;
+					}
+
 					const resources = bindableResources.get();
 					for (const prop in resources) {
 						if (resources.hasOwnProperty(prop) && !context.hasOwnProperty(prop)) {

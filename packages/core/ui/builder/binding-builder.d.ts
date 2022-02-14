@@ -8,7 +8,6 @@ export module bindingConstants {
 	export const bindingValueKey: string;
 	export const parentValueKey: string;
 	export const parentsValueKey: string;
-	export const newPropertyValueKey: string;
 }
 
 export function getBindingOptions(name: string, value: string): any;
