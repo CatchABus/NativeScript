@@ -344,7 +344,7 @@ export class Binding {
 				changedModel[sourcePropertyName] = value;
 			}
 
-			this.prepareContextForExpression(changedModel, expression);
+			this.prepareContextForExpression(changedModel, expression, [bc.bindingValueKey]);
 
 			const expressionValue = this._getExpressionValue(expression, true, changedModel);
 			if (expressionValue instanceof Error) {
