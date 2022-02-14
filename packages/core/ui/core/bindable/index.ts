@@ -376,6 +376,7 @@ export class Binding {
 					if (types.isNullOrUndefined(context)) {
 						context = global;
 					} else if (!types.isObject(context) || Array.isArray(context)) {
+						// If context is a primitive type or array, assign it as a binding value in global instance
 						global[bc.bindingValueKey] = context;
 						addedProps.push(bc.bindingValueKey);
 						context = global;
@@ -480,7 +481,7 @@ export class Binding {
 		let parentViewAndIndex: { view: ViewBase; index: number };
 		let parentView;
 		let expressionCP = expression;
-		if (expressionCP.indexOf(bc.bindingValueKey) > -1) {
+		if (expressionCP.indexOf(bc.bindingValueKey) > -1 && !addedProps.includes(bc.bindingValueKey)) {
 			model[bc.bindingValueKey] = model;
 			addedProps.push(bc.bindingValueKey);
 		}
