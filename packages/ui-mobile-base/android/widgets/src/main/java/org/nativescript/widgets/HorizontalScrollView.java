@@ -16,7 +16,7 @@ import androidx.annotation.NonNull;
 /**
  * @author hhristov
  */
-public class HorizontalScrollView extends android.widget.HorizontalScrollView {
+public class HorizontalScrollView extends android.widget.HorizontalScrollView implements Scrollable {
 
 	private final Rect mTempRect = new Rect();
 
@@ -58,7 +58,7 @@ public class HorizontalScrollView extends android.widget.HorizontalScrollView {
 
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent ev) {
-		// Do nothing with intercepted touch events if we are not scrollable
+		// Do nothing with intercepted touch events if view is not scrollable
 		if (!this.scrollEnabled) {
 			return false;
 		}

@@ -1,7 +1,6 @@
 import { ScrollEventData } from '.';
 import { ScrollViewBase, scrollBarIndicatorVisibleProperty, isScrollEnabledProperty } from './scroll-view-common';
 import { layout } from '../../utils';
-import { isUserInteractionEnabledProperty } from '../core/view';
 
 export * from './scroll-view-common';
 
@@ -44,14 +43,6 @@ export class ScrollView extends ScrollViewBase {
 		}
 
 		return nativeView.getScrollableLength() / layout.getDisplayDensity();
-	}
-
-	[isUserInteractionEnabledProperty.setNative](value: boolean) {
-		// NOTE: different behavior on iOS & Android:
-		// iOS disables user interaction recursively for all subviews as well
-		this.nativeViewProtected.setClickable(value);
-		this.nativeViewProtected.setFocusable(value);
-		this.nativeViewProtected.setScrollEnabled(value);
 	}
 
 	[isScrollEnabledProperty.getDefault](): boolean {

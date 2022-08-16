@@ -365,6 +365,12 @@
                 constructor(context: android.content.Context);
             }
 
+            export class ListView extends android.widget.ListView {
+                constructor(context: android.content.Context);
+                public getScrollEnabled(): boolean;
+                public setScrollEnabled(value: boolean): void;
+            }
+
             export class VerticalScrollView extends android.widget.ScrollView {
                 constructor(context: android.content.Context);
                 public getScrollableLength(): number;

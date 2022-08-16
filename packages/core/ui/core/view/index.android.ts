@@ -761,8 +761,12 @@ export class View extends ViewCommon {
 	}
 
 	[isUserInteractionEnabledProperty.setNative](value: boolean) {
-		this.nativeViewProtected.setClickable(value);
-		this.nativeViewProtected.setFocusable(value);
+		const nativeView: any = this.nativeViewProtected as any;
+		nativeView.setClickable(value);
+		nativeView.setFocusable(value);
+		if (nativeView.setScrollEnabled) {
+			nativeView.setScrollEnabled(value);
+		}
 	}
 
 	[hiddenProperty.getDefault](): boolean {

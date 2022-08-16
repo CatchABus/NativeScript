@@ -1,6 +1,6 @@
 import { ItemEventData, ItemsSource } from '.';
 import { ListViewBase, separatorColorProperty, itemTemplatesProperty } from './list-view-common';
-import { View, KeyedTemplate } from '../core/view';
+import { isUserInteractionEnabledProperty, View, KeyedTemplate } from '../core/view';
 import { unsetValue } from '../core/properties';
 import { CoreTypes } from '../../core-types';
 import { Color } from '../../color';
@@ -52,7 +52,7 @@ function initializeItemClickListener(): void {
 }
 
 export class ListView extends ListViewBase {
-	nativeViewProtected: android.widget.ListView;
+	nativeViewProtected: org.nativescript.widgets.ListView;
 	private _androidViewId = -1;
 
 	public _realizedItems = new Map<
@@ -120,7 +120,7 @@ export class ListView extends ListViewBase {
 
 	@profile
 	public createNativeView() {
-		const listView = new android.widget.ListView(this._context);
+		const listView = new org.nativescript.widgets.ListView(this._context);
 		listView.setDescendantFocusability(android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS);
 
 		// Fixes issue with black random black items when scrolling
@@ -289,6 +289,11 @@ export class ListView extends ListViewBase {
 		this.nativeViewProtected.setAdapter(new ListViewAdapterClass(this));
 		this.refresh();
 	}
+
+	[isUserInteractionEnabledProperty.setNative](value: boolean) {
+		super[isUserInteractionEnabledProperty.setNative](value);
+		this.refresh();
+	}
 }
 
 let ListViewAdapterClass;
@@ -327,6 +332,13 @@ function ensureListViewAdapterClass() {
 			}
 
 			return long(id);
+		}
+
+		public isEnabled(index: number) {
+			if (this.owner && !this.owner.isUserInteractionEnabled) {
+				return false;
+			}
+			return super.isEnabled(index);
 		}
 
 		public hasStableIds(): boolean {

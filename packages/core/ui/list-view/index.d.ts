@@ -24,9 +24,9 @@ export class ListView extends View {
 	public static loadMoreItemsEvent: string;
 
 	/**
-	 * Gets the native [android widget](http://developer.android.com/reference/android/widget/ListView.html) that represents the user interface for this component. Valid only when running on Android OS.
+	 * Gets an inherited class of the native [android widget](http://developer.android.com/reference/android/widget/ListView.html) that represents the user interface for this component. Valid only when running on Android OS.
 	 */
-	android: any /* android.widget.ListView */;
+	android: any /* org.nativescript.widgets.ListView */;
 
 	/**
 	 * Gets the native [iOS view](https://developer.apple.com/library/ios/documentation/UIKit/Reference/UITableView_Class/) that represents the user interface for this component. Valid only when running on iOS.

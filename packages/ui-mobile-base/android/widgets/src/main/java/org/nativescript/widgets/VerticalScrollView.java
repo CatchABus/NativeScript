@@ -57,7 +57,7 @@ public class VerticalScrollView extends ScrollView {
 
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent ev) {
-		// Do nothing with intercepted touch events if we are not scrollable
+		// Do nothing with intercepted touch events if view is not scrollable
 		if (!this.scrollEnabled) {
 			return false;
 		}
