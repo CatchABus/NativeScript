@@ -15,7 +15,7 @@ import org.nativescript.widgets.HorizontalScrollView.SavedState;
 /**
  * @author hhristov
  */
-public class VerticalScrollView extends ScrollView {
+public class VerticalScrollView extends ScrollView implements Scrollable {
 
 	private final Rect mTempRect = new Rect();
 
