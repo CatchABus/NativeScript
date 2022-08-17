@@ -98,8 +98,8 @@ function initializeTouchListener(): void {
 
 		onTouch(view: android.view.View, event: android.view.MotionEvent): boolean {
 			const owner = this.owner.get();
-			if (!owner) {
-				return;
+			if (!owner || !owner.isUserInteractionEnabled) {
+				return false;
 			}
 			owner.handleGestureTouch(event);
 
