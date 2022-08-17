@@ -24,8 +24,8 @@ public class ListView extends android.widget.ListView implements Scrollable {
 
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent ev) {
-		// Do nothing with intercepted touch events if view is not scrollable
-		if (!this.scrollEnabled) {
+		// Do nothing with intercepted move event if view is not scrollable
+		if (!this.scrollEnabled && ev.getAction() == MotionEvent.ACTION_MOVE) {
 			return false;
 		}
 
@@ -34,7 +34,7 @@ public class ListView extends android.widget.ListView implements Scrollable {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent ev) {
-		if (!this.scrollEnabled && (ev.getAction() == MotionEvent.ACTION_DOWN || ev.getAction() == MotionEvent.ACTION_MOVE)) {
+		if (!this.scrollEnabled && ev.getAction() == MotionEvent.ACTION_MOVE) {
 			return false;
 		}
 
