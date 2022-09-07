@@ -1370,7 +1370,8 @@ class ActivityCallbacksImplementation implements AndroidActivityCallbacks {
 			CSSUtils.pushToSystemCssClasses(`${CSSUtils.CLASS_PREFIX}${ANDROID_PLATFORM}`);
 			CSSUtils.pushToSystemCssClasses(`${CSSUtils.CLASS_PREFIX}${deviceType}`);
 			CSSUtils.pushToSystemCssClasses(`${CSSUtils.CLASS_PREFIX}${application.android.orientation}`);
-			CSSUtils.pushToSystemCssClasses(`${CSSUtils.CLASS_PREFIX}${application.android.systemAppearance}`);
+			// Check if system appearance classes should actually be added to view
+			application.autoSystemAppearanceChanged && CSSUtils.pushToSystemCssClasses(`${CSSUtils.CLASS_PREFIX}${application.android.systemAppearance}`);
 
 			this._rootView.cssClasses.add(CSSUtils.ROOT_VIEW_CSS_CLASS);
 			const rootViewCssClasses = CSSUtils.getSystemCssClasses();
