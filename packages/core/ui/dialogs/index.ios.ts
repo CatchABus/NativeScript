@@ -2,7 +2,7 @@
  * iOS specific dialogs functions implementation.
  */
 import { Trace } from '../../trace';
-import { ConfirmOptions, PromptOptions, PromptResult, LoginOptions, LoginResult, ActionOptions, getCurrentPage, getLabelColor, getButtonColors, getTextFieldColor, isDialogOptions, inputType, capitalizationType, DialogStrings, parseLoginOptions } from './dialogs-common';
+import { ConfirmOptions, PromptOptions, PromptResult, LoginOptions, LoginResult, ActionOptions, isDialogOptions, inputType, capitalizationType, DialogStrings, parseLoginOptions } from './dialogs-common';
 import { isString, isDefined, isFunction } from '../../utils/types';
 import { getRootView, ios } from '../../application';
 
@@ -63,22 +63,22 @@ function showUIAlertController(alertController: UIAlertController) {
 		alertController.popoverPresentationController.permittedArrowDirections = 0;
 	}
 
-	const color = getButtonColors().color;
-	if (color) {
-		alertController.view.tintColor = color.ios;
-	}
+	// const color = getButtonColors().color;
+	// if (color) {
+	// 	alertController.view.tintColor = color.ios;
+	// }
 
-	const lblColor = getLabelColor();
-	if (lblColor) {
-		if (alertController.title) {
-			const title = NSAttributedString.alloc().initWithStringAttributes(alertController.title, <any>{ [NSForegroundColorAttributeName]: lblColor.ios });
-			alertController.setValueForKey(title, 'attributedTitle');
-		}
-		if (alertController.message) {
-			const message = NSAttributedString.alloc().initWithStringAttributes(alertController.message, <any>{ [NSForegroundColorAttributeName]: lblColor.ios });
-			alertController.setValueForKey(message, 'attributedMessage');
-		}
-	}
+	// const lblColor = getLabelColor();
+	// if (lblColor) {
+	// 	if (alertController.title) {
+	// 		const title = NSAttributedString.alloc().initWithStringAttributes(alertController.title, <any>{ [NSForegroundColorAttributeName]: lblColor.ios });
+	// 		alertController.setValueForKey(title, 'attributedTitle');
+	// 	}
+	// 	if (alertController.message) {
+	// 		const message = NSAttributedString.alloc().initWithStringAttributes(alertController.message, <any>{ [NSForegroundColorAttributeName]: lblColor.ios });
+	// 		alertController.setValueForKey(message, 'attributedMessage');
+	// 	}
+	// }
 
 	viewController.presentModalViewControllerAnimated(alertController, true);
 }
@@ -167,10 +167,10 @@ export function prompt(...args): Promise<PromptResult> {
 					arg.keyboardType = UIKeyboardType.PhonePad;
 				}
 
-				const color = getTextFieldColor();
-				if (color) {
-					arg.textColor = arg.tintColor = color.ios;
-				}
+				// const color = getTextFieldColor();
+				// if (color) {
+				// 	arg.textColor = arg.tintColor = color.ios;
+				// }
 			});
 
 			const textField: UITextField = alertController.textFields.firstObject;
@@ -213,28 +213,28 @@ export function login(...args: any[]): Promise<LoginResult> {
 		try {
 			const alertController = UIAlertController.alertControllerWithTitleMessagePreferredStyle(options.title, options.message, UIAlertControllerStyle.Alert);
 
-			const textFieldColor = getTextFieldColor();
+			// const textFieldColor = getTextFieldColor();
 
-			alertController.addTextFieldWithConfigurationHandler((arg: UITextField) => {
-				arg.placeholder = 'Login';
-				arg.placeholder = options.userNameHint ? options.userNameHint : '';
-				arg.text = isString(options.userName) ? options.userName : '';
+			// alertController.addTextFieldWithConfigurationHandler((arg: UITextField) => {
+			// 	arg.placeholder = 'Login';
+			// 	arg.placeholder = options.userNameHint ? options.userNameHint : '';
+			// 	arg.text = isString(options.userName) ? options.userName : '';
 
-				if (textFieldColor) {
-					arg.textColor = arg.tintColor = textFieldColor.ios;
-				}
-			});
+			// 	if (textFieldColor) {
+			// 		arg.textColor = arg.tintColor = textFieldColor.ios;
+			// 	}
+			// });
 
-			alertController.addTextFieldWithConfigurationHandler((arg: UITextField) => {
-				arg.placeholder = 'Password';
-				arg.secureTextEntry = true;
-				arg.placeholder = options.passwordHint ? options.passwordHint : '';
-				arg.text = isString(options.password) ? options.password : '';
+			// alertController.addTextFieldWithConfigurationHandler((arg: UITextField) => {
+			// 	arg.placeholder = 'Password';
+			// 	arg.secureTextEntry = true;
+			// 	arg.placeholder = options.passwordHint ? options.passwordHint : '';
+			// 	arg.text = isString(options.password) ? options.password : '';
 
-				if (textFieldColor) {
-					arg.textColor = arg.tintColor = textFieldColor.ios;
-				}
-			});
+			// 	if (textFieldColor) {
+			// 		arg.textColor = arg.tintColor = textFieldColor.ios;
+			// 	}
+			// });
 			const userNameTextField: UITextField = alertController.textFields.firstObject;
 			const passwordTextField: UITextField = alertController.textFields.lastObject;
 

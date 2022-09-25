@@ -4,6 +4,7 @@ const cssClasses = [];
 
 export namespace CSSUtils {
 	export const CLASS_PREFIX = 'ns-';
+	export const VARIABLE_PREFIX = 'ns-';
 	export const MODAL_ROOT_VIEW_CSS_CLASS = `${CLASS_PREFIX}${MODAL}`;
 	export const ROOT_VIEW_CSS_CLASS = `${CLASS_PREFIX}${ROOT}`;
 

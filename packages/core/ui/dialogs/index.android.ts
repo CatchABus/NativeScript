@@ -1,9 +1,10 @@
 /**
  * Android specific dialogs functions implementation.
  */
-import { DialogOptions, ConfirmOptions, PromptOptions, PromptResult, LoginOptions, LoginResult, ActionOptions } from './dialogs-common';
-import { getLabelColor, getButtonColors, isDialogOptions, inputType, capitalizationType, DialogStrings, parseLoginOptions } from './dialogs-common';
+import { DialogOptions, ConfirmOptions, PromptOptions, PromptResult, LoginOptions, LoginResult, ActionOptions, getDialogCssVariablesFromRoot, DialogStyles } from './dialogs-common';
+import { isDialogOptions, inputType, capitalizationType, DialogStrings, parseLoginOptions } from './dialogs-common';
 import { android as androidApp } from '../../application';
+import { Color } from 'color';
 
 export * from './dialogs-common';
 
@@ -24,48 +25,41 @@ function createAlertDialog(options?: DialogOptions): android.app.AlertDialog.Bui
 
 function showDialog(builder: android.app.AlertDialog.Builder) {
 	const dlg = builder.show();
+	const style = getDialogCssVariablesFromRoot();
 
-	const labelColor = getLabelColor();
-	if (labelColor) {
-		const textViewId = dlg.getContext().getResources().getIdentifier('android:id/alertTitle', null, null);
-		if (textViewId) {
-			const tv = <android.widget.TextView>dlg.findViewById(textViewId);
-			if (tv) {
-				tv.setTextColor(labelColor.android);
-			}
-		}
-
-		const messageTextViewId = dlg.getContext().getResources().getIdentifier('android:id/message', null, null);
-		if (messageTextViewId) {
-			const messageTextView = <android.widget.TextView>dlg.findViewById(messageTextViewId);
-			if (messageTextView) {
-				messageTextView.setTextColor(labelColor.android);
-			}
+	if (style[DialogStyles.TITLE_COLOR]) {
+		const titleColor: Color = style[DialogStyles.TITLE_COLOR] as Color;
+		const nativeViewId = dlg.getContext().getResources().getIdentifier('android:id/alertTitle', null, null);
+		if (nativeViewId) {
+			const titleView = <android.widget.TextView>dlg.findViewById(nativeViewId);
+			titleView && titleView.setTextColor(titleColor.android);
 		}
 	}
 
-	const { color, backgroundColor } = getButtonColors();
-
-	if (color) {
-		const buttons: android.widget.Button[] = [];
-		for (let i = 0; i < 3; i++) {
-			const id = dlg
-				.getContext()
-				.getResources()
-				.getIdentifier('android:id/button' + i, null, null);
-			buttons[i] = <android.widget.Button>dlg.findViewById(id);
+	if (style[DialogStyles.MSG_COLOR]) {
+		const msgColor: Color = style[DialogStyles.MSG_COLOR] as Color;
+		const nativeViewId = dlg.getContext().getResources().getIdentifier('android:id/message', null, null);
+		if (nativeViewId) {
+			const messageTextView = <android.widget.TextView>dlg.findViewById(nativeViewId);
+			messageTextView && messageTextView.setTextColor(msgColor.android);
 		}
+	}
 
-		buttons.forEach((button) => {
-			if (button) {
-				if (color) {
-					button.setTextColor(color.android);
-				}
-				if (backgroundColor) {
-					button.setBackgroundColor(backgroundColor.android);
-				}
+	const buttonTypes = ['POSITIVE', 'NEGATIVE', 'NEUTRAL'];
+	for (const type of buttonTypes) {
+		const bgColorKey = DialogStyles[`${type}_BUTTON_BG_COLOR`];
+		const textColorKey = DialogStyles[`${type}_BUTTON_TEXT_COLOR`];
+
+		if (style[bgColorKey] || style[textColorKey]) {
+			const backgroundColor: Color = style[bgColorKey] as Color;
+			const textColor: Color = style[textColorKey] as Color;
+
+			const nativeButton = dlg.getButton(android.content.DialogInterface[`BUTTON_${type}`]);
+			if (nativeButton) {
+				backgroundColor && nativeButton.setBackgroundColor(backgroundColor.android);
+				textColor && nativeButton.setTextColor(textColor.android);
 			}
-		});
+		}
 	}
 }
 
@@ -201,6 +195,7 @@ export function prompt(...args): Promise<PromptResult> {
 	return new Promise<PromptResult>((resolve, reject) => {
 		try {
 			const alert = createAlertDialog(options);
+			const style = getDialogCssVariablesFromRoot();
 
 			const input = new android.widget.EditText(androidApp.foregroundActivity);
 
@@ -234,6 +229,10 @@ export function prompt(...args): Promise<PromptResult> {
 			}
 
 			input.setText((options && options.defaultText) || '');
+			if (style[DialogStyles.INPUT_TEXT_COLOR]) {
+				const textColor: Color = style[DialogStyles.INPUT_TEXT_COLOR] as Color;
+				input.setTextColor(textColor.android);
+			}
 
 			alert.setView(input);
 
@@ -260,6 +259,7 @@ export function login(...args: any[]): Promise<LoginResult> {
 			const context = androidApp.foregroundActivity;
 
 			const alert = createAlertDialog(options);
+			const style = getDialogCssVariablesFromRoot();
 
 			const userNameInput = new android.widget.EditText(context);
 
@@ -272,6 +272,12 @@ export function login(...args: any[]): Promise<LoginResult> {
 
 			passwordInput.setHint(options.passwordHint ? options.passwordHint : '');
 			passwordInput.setText(options.password ? options.password : '');
+
+			if (style[DialogStyles.INPUT_TEXT_COLOR]) {
+				const textColor: Color = style[DialogStyles.INPUT_TEXT_COLOR] as Color;
+				userNameInput.setTextColor(textColor.android);
+				passwordInput.setTextColor(textColor.android);
+			}
 
 			const layout = new android.widget.LinearLayout(context);
 			layout.setOrientation(1);

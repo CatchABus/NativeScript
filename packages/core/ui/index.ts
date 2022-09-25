@@ -19,8 +19,8 @@ export { Property, CoercibleProperty, InheritedProperty, CssProperty, InheritedC
 export { addWeakEventListener, removeWeakEventListener } from './core/weak-event-listener';
 export { DatePicker } from './date-picker';
 
-// No need go export dialogs, they are already export exported globally
-export { DialogStrings, action, alert, confirm, login, prompt, getCurrentPage, Dialogs, inputType, capitalizationType } from './dialogs';
+// No need go export dialogs, they are already exported globally
+export { DialogStrings, action, alert, confirm, login, prompt, Dialogs, inputType, capitalizationType } from './dialogs';
 export type { DialogOptions, CancelableOptions, AlertOptions, PromptResult, PromptOptions, ActionOptions, ConfirmOptions, LoginResult, LoginOptions } from './dialogs';
 
 export * from './editable-text-base';

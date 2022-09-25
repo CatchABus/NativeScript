@@ -1,9 +1,9 @@
-// Types.
-import { View } from '../core/view';
+import { getRootView } from '../../application';
 import { Color } from '../../color';
-import { Page } from '../page';
-import { Frame } from '../frame';
+import { CSSUtils } from '../../css/system-classes';
 import { isObject, isString } from '../../utils/types';
+
+const CSS_VARIABLE_PREFIX = `--${CSSUtils.VARIABLE_PREFIX}dialog`;
 
 export namespace DialogStrings {
 	export const STRING = 'string';
@@ -14,6 +14,16 @@ export namespace DialogStrings {
 	export const OK = 'OK';
 	export const CANCEL = 'Cancel';
 }
+
+export const DialogStyles = {
+	TITLE_COLOR: `${CSS_VARIABLE_PREFIX}-title-color`,
+	MSG_COLOR: `${CSS_VARIABLE_PREFIX}-msg-color`,
+	POSITIVE_BUTTON_BG_COLOR: `${CSS_VARIABLE_PREFIX}-positive-btn-bg-color`,
+	POSITIVE_BUTTON_TEXT_COLOR: `${CSS_VARIABLE_PREFIX}-positive-btn-text-color`,
+	NEGATIVE_BUTTON_BG_COLOR: `${CSS_VARIABLE_PREFIX}-negative-btn-bg-color`,
+	NEGATIVE_BUTTON_TEXT_COLOR: `${CSS_VARIABLE_PREFIX}-negative-btn-text-color`,
+	INPUT_TEXT_COLOR: `${CSS_VARIABLE_PREFIX}-input-text-color`,
+};
 
 /**
  * Provides options for the dialog.
@@ -73,6 +83,11 @@ export interface DialogOptions extends CancelableOptions {
 	 * Gets or sets the dialog message.
 	 */
 	message?: string;
+
+	/**
+	 * Gets or sets the dialog style.
+	 */
+	style?: typeof DialogStyles;
 }
 
 /**
@@ -240,83 +255,28 @@ export namespace capitalizationType {
 	export const words = 'words';
 }
 
-export function getCurrentPage(): Page {
-	const topmostFrame = Frame.topmost();
-	if (topmostFrame) {
-		return topmostFrame.currentPage;
+export function getDialogCssVariablesFromRoot(): Record<string, unknown> {
+	const rootView = getRootView();
+	const values = {};
+
+	if (!rootView) {
+		return values;
 	}
 
-	return undefined;
-}
-
-function applySelectors<T extends View>(view: T, callback: (view: T) => void) {
-	const currentPage = getCurrentPage();
-	if (currentPage) {
-		const styleScope = currentPage._styleScope;
-		if (styleScope) {
-			view._inheritStyleScope(styleScope);
-			view.onLoaded();
-			callback(view);
-			view.onUnloaded();
+	for (const key in DialogStyles) {
+		const cssVarName = DialogStyles[key];
+		const value = rootView.style.getCssVariable(cssVarName);
+		if (cssVarName.endsWith('-color')) {
+			if (Color.isValid(value)) {
+				values[cssVarName] = new Color(value);
+			}
+		} else {
+			if (value != null) {
+				values[cssVarName] = value;
+			}
 		}
 	}
-}
-
-let button: View;
-let label: View;
-let textField: View;
-
-export function getButtonColors(): { color: Color; backgroundColor: Color } {
-	if (!button) {
-		const Button = require('../button').Button;
-		button = new Button();
-		if (global.isIOS) {
-			button._setupUI(<any>{});
-		}
-	}
-
-	let buttonColor: Color;
-	let buttonBackgroundColor: Color;
-	applySelectors(button, (btn) => {
-		buttonColor = btn.color;
-		buttonBackgroundColor = <Color>btn.backgroundColor;
-	});
-
-	return { color: buttonColor, backgroundColor: buttonBackgroundColor };
-}
-
-export function getLabelColor(): Color {
-	if (!label) {
-		const Label = require('../label').Label;
-		label = new Label();
-		if (global.isIOS) {
-			label._setupUI(<any>{});
-		}
-	}
-
-	let labelColor: Color;
-	applySelectors(label, (lbl) => {
-		labelColor = lbl.color;
-	});
-
-	return labelColor;
-}
-
-export function getTextFieldColor(): Color {
-	if (!textField) {
-		const TextField = require('../text-field').TextField;
-		textField = new TextField();
-		if (global.isIOS) {
-			textField._setupUI(<any>{});
-		}
-	}
-
-	let textFieldColor: Color;
-	applySelectors(textField, (tf) => {
-		textFieldColor = tf.color;
-	});
-
-	return textFieldColor;
+	return values;
 }
 
 export function isDialogOptions(arg): boolean {
