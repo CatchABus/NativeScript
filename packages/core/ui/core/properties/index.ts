@@ -37,15 +37,6 @@ export interface ShorthandPropertyOptions<P> {
 	readonly getter: (this: Style) => string | P;
 }
 
-export interface CssAnimationPropertyOptions<T, U> {
-	readonly name: string;
-	readonly cssName?: string;
-	readonly defaultValue?: U;
-	readonly equalityComparer?: (x: U, y: U) => boolean;
-	readonly valueChanged?: (target: T, oldValue: U, newValue: U) => void;
-	readonly valueConverter?: (value: string) => U;
-}
-
 const cssPropertyNames: string[] = [];
 const symbolPropertyMap = {};
 const cssSymbolPropertyMap = {};
@@ -622,6 +613,8 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 		this.defaultValue = defaultValue;
 
 		const eventName = propertyName + 'Change';
+		const property = this;
+
 		let affectsLayout: boolean = options.affectsLayout;
 		let equalityComparer = options.equalityComparer;
 		let valueChanged = options.valueChanged;
@@ -641,8 +634,6 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 				valueConverter = options.valueConverter;
 			}
 		};
-
-		const property = this;
 
 		function setLocalValue(this: T, newValue: U | string): void {
 			const view = this.viewRef.get();
@@ -871,7 +862,9 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 
 	public _valueConverter?: (value: string) => any;
 
-	constructor(options: CssAnimationPropertyOptions<T, U>) {
+	public overrideHandlers: (options: CssPropertyOptions<T, U>) => void;
+
+	constructor(options: CssPropertyOptions<T, U>) {
 		const propertyName = options.name;
 		this.name = propertyName;
 
@@ -910,8 +903,27 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 		const getDefault = this.getDefault;
 		const setNative = (this.setNative = Symbol(propertyName + ':setNative'));
 		const eventName = propertyName + 'Change';
-
 		const property = this;
+
+		let affectsLayout: boolean = options.affectsLayout;
+		let equalityComparer = options.equalityComparer;
+		let valueChanged = options.valueChanged;
+		let valueConverter = options.valueConverter;
+
+		this.overrideHandlers = function (options: CssPropertyOptions<T, U>) {
+			if (typeof options.equalityComparer !== 'undefined') {
+				equalityComparer = options.equalityComparer;
+			}
+			if (typeof options.affectsLayout !== 'undefined') {
+				affectsLayout = options.affectsLayout;
+			}
+			if (typeof options.valueChanged !== 'undefined') {
+				valueChanged = options.valueChanged;
+			}
+			if (typeof options.valueConverter !== 'undefined') {
+				valueConverter = options.valueConverter;
+			}
+		};
 
 		function descriptor(symbol: symbol, propertySource: ValueSource, enumerable: boolean, configurable: boolean, getsComputed: boolean): PropertyDescriptor {
 			return {
@@ -1002,6 +1014,10 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 							value,
 							oldValue,
 						});
+					}
+
+					if (affectsLayout) {
+						view.requestLayout();
 					}
 				},
 			};
