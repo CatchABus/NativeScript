@@ -19,6 +19,13 @@ export namespace Properties {
 	export const width = 'width';
 }
 
+export enum AnimationState {
+	NONE,
+	PLAYING,
+	CANCELLED,
+	FINISHED,
+}
+
 export class CubicBezierAnimationCurve implements CubicBezierAnimationCurveDefinition {
 	public x1: number;
 	public y1: number;
@@ -36,13 +43,13 @@ export class CubicBezierAnimationCurve implements CubicBezierAnimationCurveDefin
 export abstract class AnimationBase implements AnimationBaseDefinition {
 	public _propertyAnimations: Array<PropertyAnimation>;
 	public _playSequentially: boolean;
-	private _isPlaying: boolean;
+	private _state: AnimationState = AnimationState.NONE;
 	private _resolve;
 	private _reject;
 
 	constructor(animationDefinitions: Array<AnimationDefinition>, playSequentially?: boolean) {
 		if (!animationDefinitions || animationDefinitions.length === 0) {
-			console.error('No animation definitions specified');
+			Trace.write('No animation definitions specified', Trace.categories.Animation, Trace.messageType.error);
 			return;
 		}
 
@@ -92,7 +99,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 
 		this.fixupAnimationPromise(animationFinishedPromise);
 
-		this._isPlaying = true;
+		this._state = AnimationState.PLAYING;
 
 		return animationFinishedPromise;
 	}
@@ -126,22 +133,30 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 	}
 
 	public get isPlaying(): boolean {
-		return this._isPlaying;
+		return this._state === AnimationState.PLAYING;
+	}
+
+	public get isCancelled(): boolean {
+		return this._state === AnimationState.CANCELLED;
 	}
 
 	public _resolveAnimationFinishedPromise() {
-		this._isPlaying = false;
+		this._state = AnimationState.FINISHED;
 		this._resolve();
 	}
 
 	public _rejectAnimationFinishedPromise() {
-		this._isPlaying = false;
+		this._markAsCancelled();
 		this._reject(new Error('Animation cancelled.'));
+	}
+
+	public _markAsCancelled() {
+		this._state = AnimationState.CANCELLED;
 	}
 
 	private static _createPropertyAnimations(animationDefinition: AnimationDefinition): Array<PropertyAnimation> {
 		if (!animationDefinition.target) {
-			console.error('No animation target specified.');
+			Trace.write('No animation target specified', Trace.categories.Animation, Trace.messageType.error);
 			return;
 		}
 
@@ -152,13 +167,13 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 			}
 
 			if ((item === Properties.opacity || item === 'duration' || item === 'delay' || item === 'iterations') && typeof value !== 'number') {
-				console.error(`Property ${item} must be valid number. Value: ${value}`);
+				Trace.write(`Property ${item} must be valid number. Value: ${value}`, Trace.categories.Animation, Trace.messageType.error);
 				return;
 			} else if ((item === Properties.scale || item === Properties.translate) && (typeof (<Pair>value).x !== 'number' || typeof (<Pair>value).y !== 'number')) {
-				console.error(`Property ${item} must be valid Pair. Value: ${value}`);
+				Trace.write(`Property ${item} must be valid Pair. Value: ${value}`, Trace.categories.Animation, Trace.messageType.error);
 				return;
 			} else if (item === Properties.backgroundColor && !Color.isValid(animationDefinition.backgroundColor)) {
-				console.error(`Property ${item} must be valid color. Value: ${value}`);
+				Trace.write(`Property ${item} must be valid color. Value: ${value}`, Trace.categories.Animation, Trace.messageType.error);
 				return;
 			} else if (item === Properties.width || item === Properties.height) {
 				// Coerce input into a PercentLength object in case it's a string.
@@ -166,7 +181,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 			} else if (item === Properties.rotate) {
 				const rotate: number | Point3D = value;
 				if (typeof rotate !== 'number' && !(typeof rotate.x === 'number' && typeof rotate.y === 'number' && typeof rotate.z === 'number')) {
-					console.error(`Property ${rotate} must be valid number or Point3D. Value: ${value}`);
+					Trace.write(`Property ${rotate} must be valid number or Point3D. Value: ${value}`, Trace.categories.Animation, Trace.messageType.error);
 					return;
 				}
 			}
@@ -274,7 +289,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		}
 
 		if (propertyAnimations.length === 0) {
-			console.error('No known animation properties specified');
+			Trace.write('No known animation properties specified', Trace.categories.Animation, Trace.messageType.error);
 		}
 
 		return propertyAnimations;

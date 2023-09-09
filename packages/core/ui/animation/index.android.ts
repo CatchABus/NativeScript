@@ -127,7 +127,7 @@ export class Animation extends AnimationBase {
 			this._valueSource = animationDefinitions[0].valueSource;
 		}
 
-		const that = new WeakRef(this);
+		const animationRef = new WeakRef(this);
 		this._animatorListener = new android.animation.Animator.AnimatorListener({
 			onAnimationStart: function (animator: android.animation.Animator): void {
 				if (Trace.isEnabled()) {
@@ -143,18 +143,18 @@ export class Animation extends AnimationBase {
 				if (Trace.isEnabled()) {
 					Trace.write('MainAnimatorListener.onAnimationEnd(' + animator + ')', Trace.categories.Animation);
 				}
-				const thisRef = that?.get();
-				if (thisRef) {
-					thisRef._onAndroidAnimationEnd();
+				const animation = animationRef?.get();
+				if (animation) {
+					animation._onAndroidAnimationEnd();
 				}
 			},
 			onAnimationCancel: function (animator: android.animation.Animator): void {
 				if (Trace.isEnabled()) {
 					Trace.write('MainAnimatorListener.onAnimationCancel(' + animator + ')', Trace.categories.Animation);
 				}
-				const thisRef = that?.get();
-				if (thisRef) {
-					thisRef._onAndroidAnimationCancel();
+				const animation = animationRef?.get();
+				if (animation) {
+					animation._onAndroidAnimationCancel();
 				}
 			},
 		});
@@ -195,12 +195,12 @@ export class Animation extends AnimationBase {
 	public cancel(): void {
 		if (!this.isPlaying) {
 			Trace.write('Animation is not currently playing.', Trace.categories.Animation, Trace.messageType.warn);
-
 			return;
 		}
 
-		Trace.write('Cancelling AnimatorSet.', Trace.categories.Animation);
+		this._markAsCancelled();
 
+		Trace.write('Cancelling AnimatorSet.', Trace.categories.Animation);
 		this._animatorSet.cancel();
 	}
 
@@ -248,7 +248,7 @@ export class Animation extends AnimationBase {
 	private _onAndroidAnimationCancel() {
 		// tslint:disable-line
 		this._propertyResetCallbacks.forEach((v) => v());
-		this._resolveAnimationFinishedPromise();
+		this._rejectAnimationFinishedPromise();
 
 		if (this._target) {
 			this._target._removeAnimation(this);

@@ -146,6 +146,7 @@ export class Animation {
 	public play: (resetOnFinish?: boolean) => AnimationPromise;
 	public cancel: () => void;
 	public isPlaying: boolean;
+	public isCancelled: boolean;
 	public _resolveAnimationCurve(curve: any): any;
 }
 
