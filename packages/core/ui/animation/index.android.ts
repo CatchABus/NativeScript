@@ -123,7 +123,7 @@ export class Animation extends AnimationBase {
 		super(animationDefinitions, playSequentially);
 
 		this._valueSource = 'animation';
-		if (animationDefinitions.length > 0 && animationDefinitions[0].valueSource !== undefined) {
+		if (animationDefinitions.length > 0 && animationDefinitions[0].valueSource != null) {
 			this._valueSource = animationDefinitions[0].valueSource;
 		}
 
@@ -161,7 +161,7 @@ export class Animation extends AnimationBase {
 	}
 
 	public play(resetOnFinish?: boolean): AnimationPromise {
-		if (resetOnFinish !== undefined) {
+		if (resetOnFinish != null) {
 			this._resetOnFinish = resetOnFinish;
 		}
 
@@ -264,15 +264,15 @@ export class Animation extends AnimationBase {
 			Trace.write('Creating ObjectAnimator(s) for animation: ' + Animation._getAnimationInfo(propertyAnimation) + '...', Trace.categories.Animation);
 		}
 
-		if (propertyAnimation.target === null || propertyAnimation.target === undefined) {
+		if (propertyAnimation.target == null || propertyAnimation.target == null) {
 			throw new Error(`Animation target cannot be null or undefined; property: ${propertyAnimation.property}; value: ${propertyAnimation.value};`);
 		}
 
-		if (propertyAnimation.property === null || propertyAnimation.property === undefined) {
+		if (propertyAnimation.property == null || propertyAnimation.property == null) {
 			throw new Error(`Animation property cannot be null or undefined; target: ${propertyAnimation.target}; value: ${propertyAnimation.value};`);
 		}
 
-		if (propertyAnimation.value === null || propertyAnimation.value === undefined) {
+		if (propertyAnimation.value == null || propertyAnimation.value == null) {
 			throw new Error(`Animation value cannot be null or undefined; target: ${propertyAnimation.target}; property: ${propertyAnimation.property};`);
 		}
 
@@ -487,22 +487,22 @@ export class Animation extends AnimationBase {
 
 		for (let i = 0, length = animators.length; i < length; i++) {
 			// Duration
-			if (propertyAnimation.duration !== undefined) {
+			if (propertyAnimation.duration != null) {
 				animators[i].setDuration(propertyAnimation.duration);
 			}
 
 			// Delay
-			if (propertyAnimation.delay !== undefined) {
+			if (propertyAnimation.delay != null) {
 				animators[i].setStartDelay(propertyAnimation.delay);
 			}
 
 			// Repeat Count
-			if (propertyAnimation.iterations !== undefined && animators[i] instanceof android.animation.ValueAnimator) {
+			if (propertyAnimation.iterations != null && animators[i] instanceof android.animation.ValueAnimator) {
 				(<android.animation.ValueAnimator>animators[i]).setRepeatCount(getAndroidRepeatCount(propertyAnimation.iterations));
 			}
 
 			// Interpolator
-			if (propertyAnimation.curve !== undefined) {
+			if (propertyAnimation.curve != null) {
 				animators[i].setInterpolator(propertyAnimation.curve);
 			}
 

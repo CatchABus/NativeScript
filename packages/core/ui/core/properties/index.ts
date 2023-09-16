@@ -166,6 +166,8 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 
 	public readonly defaultValueKey: symbol;
 	public readonly defaultValue: U;
+	public readonly affectsLayout: boolean;
+
 	public readonly nativeValueChange: (owner: T, value: U) => void;
 
 	public isStyleProperty: boolean;
@@ -582,6 +584,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 	public readonly sourceKey: symbol;
 	public readonly defaultValueKey: symbol;
 	public readonly defaultValue: U;
+	public readonly affectsLayout: boolean;
 
 	public overrideHandlers: (options: CssPropertyOptions<T, U>) => void;
 
@@ -853,6 +856,7 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 	private readonly source: symbol;
 
 	public readonly defaultValue: U;
+	public readonly affectsLayout: boolean;
 
 	public isStyleProperty: boolean;
 
