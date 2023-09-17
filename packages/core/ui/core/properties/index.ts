@@ -7,6 +7,7 @@ import { Trace } from '../../../trace';
 import { Style } from '../../styling/style';
 
 import { profile } from '../../../profiling';
+import { isString } from '../../../utils/types';
 
 /**
  * Value specifying that Property should be set to its initial value.
@@ -88,7 +89,7 @@ export function isCssVariableExpression(value: string) {
 }
 
 export function _evaluateCssVariableExpression(view: ViewBase, cssName: string, value: string): string {
-	if (typeof value !== 'string') {
+	if (isString(value)) {
 		return value;
 	}
 
@@ -136,7 +137,7 @@ export function _evaluateCssVariableExpression(view: ViewBase, cssName: string, 
 }
 
 export function _evaluateCssCalcExpression(value: string) {
-	if (typeof value !== 'string') {
+	if (isString(value)) {
 		return value;
 	}
 
@@ -166,11 +167,11 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 
 	public readonly defaultValueKey: symbol;
 	public readonly defaultValue: U;
-	public readonly affectsLayout: boolean;
 
 	public readonly nativeValueChange: (owner: T, value: U) => void;
 
 	public isStyleProperty: boolean;
+	public affectsLayout: boolean;
 
 	public get: () => U;
 	public set: (value: U) => void;
@@ -180,6 +181,8 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 
 	constructor(options: PropertyOptions<T, U>) {
 		const propertyName = options.name;
+		const eventName = propertyName + 'Change';
+
 		this.name = propertyName;
 
 		const key = Symbol(propertyName + ':propertyKey');
@@ -197,29 +200,25 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 		const defaultValue: U = options.defaultValue;
 		this.defaultValue = defaultValue;
 
-		const eventName = propertyName + 'Change';
+		this.affectsLayout = options.affectsLayout;
+
+		const property = this;
 
 		let equalityComparer = options.equalityComparer;
-		let affectsLayout: boolean = options.affectsLayout;
 		let valueChanged = options.valueChanged;
 		let valueConverter = options.valueConverter;
 
 		this.overrideHandlers = function (options: PropertyOptions<T, U>) {
-			if (typeof options.equalityComparer !== 'undefined') {
+			if (options.equalityComparer != null) {
 				equalityComparer = options.equalityComparer;
 			}
-			if (typeof options.affectsLayout !== 'undefined') {
-				affectsLayout = options.affectsLayout;
-			}
-			if (typeof options.valueChanged !== 'undefined') {
+			if (options.valueChanged != null) {
 				valueChanged = options.valueChanged;
 			}
-			if (typeof options.valueConverter !== 'undefined') {
+			if (options.valueConverter != null) {
 				valueConverter = options.valueConverter;
 			}
 		};
-
-		const property = this;
 
 		this.set = function (this: T, boxedValue: U): void {
 			const reset = boxedValue === unsetValue;
@@ -231,8 +230,8 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 				wrapped = boxedValue && (<any>boxedValue).wrapped;
 				value = wrapped ? WrappedValue.unwrap(boxedValue) : boxedValue;
 
-				if (valueConverter && typeof value === 'string') {
-					value = valueConverter(value);
+				if (valueConverter && isString(value)) {
+					value = valueConverter(<string>value);
 				}
 			}
 
@@ -240,7 +239,7 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 			const changed: boolean = equalityComparer ? !equalityComparer(oldValue, value) : oldValue !== value;
 
 			if (wrapped || changed) {
-				if (affectsLayout) {
+				if (property.affectsLayout) {
 					this.requestLayout();
 				}
 
@@ -329,7 +328,7 @@ export class Property<T extends ViewBase, U> implements TypedPropertyDescriptor<
 					});
 				}
 
-				if (affectsLayout) {
+				if (property.affectsLayout) {
 					owner.requestLayout();
 				}
 
@@ -363,6 +362,8 @@ export class CoercibleProperty<T extends ViewBase, U> extends Property<T, U> imp
 		super(options);
 
 		const propertyName = options.name;
+		const eventName = propertyName + 'Change';
+
 		const key = this.key;
 		const getDefault: symbol = this.getDefault;
 		const setNative: symbol = this.setNative;
@@ -371,29 +372,24 @@ export class CoercibleProperty<T extends ViewBase, U> extends Property<T, U> imp
 
 		const coerceKey = Symbol(propertyName + ':coerceKey');
 
-		const eventName = propertyName + 'Change';
-		let affectsLayout: boolean = options.affectsLayout;
+		const property = this;
+
 		let equalityComparer = options.equalityComparer;
 		let valueChanged = options.valueChanged;
 		let valueConverter = options.valueConverter;
 		let coerceCallback = options.coerceValue;
 
-		const property = this;
-
 		this.overrideHandlers = function (options: CoerciblePropertyOptions<T, U>) {
-			if (typeof options.equalityComparer !== 'undefined') {
+			if (options.equalityComparer != null) {
 				equalityComparer = options.equalityComparer;
 			}
-			if (typeof options.affectsLayout !== 'undefined') {
-				affectsLayout = options.affectsLayout;
-			}
-			if (typeof options.valueChanged !== 'undefined') {
+			if (options.valueChanged != null) {
 				valueChanged = options.valueChanged;
 			}
-			if (typeof options.valueConverter !== 'undefined') {
+			if (options.valueConverter != null) {
 				valueConverter = options.valueConverter;
 			}
-			if (typeof options.coerceValue !== 'undefined') {
+			if (options.coerceValue != null) {
 				coerceCallback = options.coerceValue;
 			}
 		};
@@ -415,8 +411,8 @@ export class CoercibleProperty<T extends ViewBase, U> extends Property<T, U> imp
 				wrapped = boxedValue && (<any>boxedValue).wrapped;
 				value = wrapped ? WrappedValue.unwrap(boxedValue) : boxedValue;
 
-				if (valueConverter && typeof value === 'string') {
-					value = valueConverter(value);
+				if (valueConverter && isString(value)) {
+					value = valueConverter(<string>value);
 				}
 
 				this[coerceKey] = value;
@@ -477,7 +473,7 @@ export class CoercibleProperty<T extends ViewBase, U> extends Property<T, U> imp
 					});
 				}
 
-				if (affectsLayout) {
+				if (property.affectsLayout) {
 					this.requestLayout();
 				}
 
@@ -577,6 +573,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 	protected readonly localValueDescriptor: PropertyDescriptor;
 
 	public isStyleProperty: boolean;
+	public affectsLayout: boolean;
 
 	public readonly key: symbol;
 	public readonly getDefault: symbol;
@@ -584,12 +581,13 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 	public readonly sourceKey: symbol;
 	public readonly defaultValueKey: symbol;
 	public readonly defaultValue: U;
-	public readonly affectsLayout: boolean;
 
 	public overrideHandlers: (options: CssPropertyOptions<T, U>) => void;
 
 	constructor(options: CssPropertyOptions<T, U>) {
 		const propertyName = options.name;
+		const eventName = propertyName + 'Change';
+
 		this.name = propertyName;
 
 		cssPropertyNames.push(options.cssName);
@@ -615,25 +613,22 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 		const defaultValue: U = options.defaultValue;
 		this.defaultValue = defaultValue;
 
-		const eventName = propertyName + 'Change';
+		this.affectsLayout = options.affectsLayout;
+
 		const property = this;
 
-		let affectsLayout: boolean = options.affectsLayout;
 		let equalityComparer = options.equalityComparer;
 		let valueChanged = options.valueChanged;
 		let valueConverter = options.valueConverter;
 
 		this.overrideHandlers = function (options: CssPropertyOptions<T, U>) {
-			if (typeof options.equalityComparer !== 'undefined') {
+			if (options.equalityComparer != null) {
 				equalityComparer = options.equalityComparer;
 			}
-			if (typeof options.affectsLayout !== 'undefined') {
-				affectsLayout = options.affectsLayout;
-			}
-			if (typeof options.valueChanged !== 'undefined') {
+			if (options.valueChanged != null) {
 				valueChanged = options.valueChanged;
 			}
-			if (typeof options.valueConverter !== 'undefined') {
+			if (options.valueConverter != null) {
 				valueConverter = options.valueConverter;
 			}
 		};
@@ -653,7 +648,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 				delete this[sourceKey];
 			} else {
 				this[sourceKey] = ValueSource.Local;
-				value = valueConverter && typeof newValue === 'string' ? valueConverter(newValue) : <U>newValue;
+				value = valueConverter && isString(newValue) ? valueConverter(<string>newValue) : <U>newValue;
 			}
 
 			const oldValue = <U>(key in this ? this[key] : defaultValue);
@@ -710,7 +705,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 					});
 				}
 
-				if (affectsLayout) {
+				if (property.affectsLayout) {
 					view.requestLayout();
 				}
 			}
@@ -737,7 +732,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 				value = defaultValue;
 				delete this[sourceKey];
 			} else {
-				value = valueConverter && typeof newValue === 'string' ? valueConverter(newValue) : <U>newValue;
+				value = valueConverter && isString(newValue) ? valueConverter(<string>newValue) : <U>newValue;
 				this[sourceKey] = ValueSource.Css;
 			}
 
@@ -795,7 +790,7 @@ export class CssProperty<T extends Style, U> implements CssProperty<T, U> {
 					});
 				}
 
-				if (affectsLayout) {
+				if (property.affectsLayout) {
 					view.requestLayout();
 				}
 			}
@@ -856,9 +851,9 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 	private readonly source: symbol;
 
 	public readonly defaultValue: U;
-	public readonly affectsLayout: boolean;
 
 	public isStyleProperty: boolean;
+	public affectsLayout: boolean;
 
 	private static properties: {
 		[cssName: string]: CssAnimationProperty<any, any>;
@@ -870,6 +865,8 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 
 	constructor(options: CssPropertyOptions<T, U>) {
 		const propertyName = options.name;
+		const eventName = propertyName + 'Change';
+
 		this.name = propertyName;
 
 		cssPropertyNames.push(options.cssName);
@@ -906,25 +903,23 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 		this.getDefault = Symbol(propertyName + ':getDefault');
 		const getDefault = this.getDefault;
 		const setNative = (this.setNative = Symbol(propertyName + ':setNative'));
-		const eventName = propertyName + 'Change';
+
+		this.affectsLayout = options.affectsLayout;
+
 		const property = this;
 
-		let affectsLayout: boolean = options.affectsLayout;
 		let equalityComparer = options.equalityComparer;
 		let valueChanged = options.valueChanged;
 		let valueConverter = options.valueConverter;
 
 		this.overrideHandlers = function (options: CssPropertyOptions<T, U>) {
-			if (typeof options.equalityComparer !== 'undefined') {
+			if (options.equalityComparer != null) {
 				equalityComparer = options.equalityComparer;
 			}
-			if (typeof options.affectsLayout !== 'undefined') {
-				affectsLayout = options.affectsLayout;
-			}
-			if (typeof options.valueChanged !== 'undefined') {
+			if (options.valueChanged != null) {
 				valueChanged = options.valueChanged;
 			}
-			if (typeof options.valueConverter !== 'undefined') {
+			if (options.valueConverter != null) {
 				valueConverter = options.valueConverter;
 			}
 		};
@@ -969,8 +964,8 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 							}
 						}
 					} else {
-						if (options.valueConverter && typeof boxedValue === 'string') {
-							boxedValue = options.valueConverter(boxedValue);
+						if (options.valueConverter && isString(boxedValue)) {
+							boxedValue = options.valueConverter(<string>boxedValue);
 						}
 						this[symbol] = boxedValue;
 						if (this[computedSource] <= propertySource) {
@@ -1020,7 +1015,7 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 						});
 					}
 
-					if (affectsLayout) {
+					if (property.affectsLayout) {
 						view.requestLayout();
 					}
 				},
@@ -1089,6 +1084,7 @@ export class InheritedCssProperty<T extends Style, U> extends CssProperty<T, U> 
 	constructor(options: CssPropertyOptions<T, U>) {
 		super(options);
 		const propertyName = options.name;
+		const eventName = propertyName + 'Change';
 
 		const key = this.key;
 		const sourceKey = this.sourceKey;
@@ -1096,26 +1092,21 @@ export class InheritedCssProperty<T extends Style, U> extends CssProperty<T, U> 
 		const setNative = this.setNative;
 		const defaultValueKey = this.defaultValueKey;
 
-		const eventName = propertyName + 'Change';
+		const property = this;
+
 		let defaultValue: U = options.defaultValue;
-		let affectsLayout: boolean = options.affectsLayout;
 		let equalityComparer = options.equalityComparer;
 		let valueChanged = options.valueChanged;
 		let valueConverter = options.valueConverter;
 
-		const property = this;
-
 		this.overrideHandlers = function (options: CssPropertyOptions<T, U>) {
-			if (typeof options.equalityComparer !== 'undefined') {
+			if (options.equalityComparer != null) {
 				equalityComparer = options.equalityComparer;
 			}
-			if (typeof options.affectsLayout !== 'undefined') {
-				affectsLayout = options.affectsLayout;
-			}
-			if (typeof options.valueChanged !== 'undefined') {
+			if (options.valueChanged != null) {
 				valueChanged = options.valueChanged;
 			}
-			if (typeof options.valueConverter !== 'undefined') {
+			if (options.valueConverter != null) {
 				valueConverter = options.valueConverter;
 			}
 		};
@@ -1162,7 +1153,7 @@ export class InheritedCssProperty<T extends Style, U> extends CssProperty<T, U> 
 					}
 				} else {
 					this[sourceKey] = valueSource;
-					if (valueConverter && typeof boxedValue === 'string') {
+					if (valueConverter && isString(boxedValue)) {
 						value = valueConverter(boxedValue);
 					} else {
 						value = boxedValue;
@@ -1210,7 +1201,7 @@ export class InheritedCssProperty<T extends Style, U> extends CssProperty<T, U> 
 						});
 					}
 
-					if (affectsLayout) {
+					if (property.affectsLayout) {
 						view.requestLayout();
 					}
 
