@@ -106,7 +106,9 @@ export namespace ios {
 
 		// Clip-path should be called after borders are applied
 		if (nativeView.maskType === iosViewUtils.LayerMask.CLIP_PATH && layer.mask instanceof CAShapeLayer) {
-			layer.mask.path = generateClipPath(view, layer.bounds);
+			if (UIView.inheritedAnimationDuration === 0) {
+				layer.mask.path = generateClipPath(view, layer.bounds);
+			}
 		}
 
 		if (background.hasBoxShadow()) {
@@ -731,13 +733,14 @@ function calculateNonUniformBorderCappedRadii(bounds: CGRect, background: Backgr
 function drawNonUniformBorders(nativeView: NativeScriptUIView, background: BackgroundDefinition): void {
 	const layer: CALayer = nativeView.layer;
 	const layerBounds = layer.bounds;
+	const isAnimatingView: boolean = UIView.inheritedAnimationDuration > 0;
 
 	layer.borderColor = null;
 	layer.borderWidth = 0;
 	layer.cornerRadius = 0;
 
 	const cappedOuterRadii = calculateNonUniformBorderCappedRadii(layerBounds, background);
-	if (nativeView.maskType === iosViewUtils.LayerMask.BORDER && layer.mask instanceof CAShapeLayer) {
+	if (!isAnimatingView && nativeView.maskType === iosViewUtils.LayerMask.BORDER && layer.mask instanceof CAShapeLayer) {
 		layer.mask.path = generateNonUniformBorderOuterClipPath(layerBounds, cappedOuterRadii);
 	}
 
@@ -751,7 +754,9 @@ function drawNonUniformBorders(nativeView: NativeScriptUIView, background: Backg
 
 		if (background.hasUniformBorderColor()) {
 			nativeView.borderLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			nativeView.borderLayer.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
+			if (!isAnimatingView) {
+				nativeView.borderLayer.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
+			}
 		} else {
 			// Non-uniform borders need more layers in order to display multiple colors at the same time
 			let borderTopLayer, borderRightLayer, borderBottomLayer, borderLeftLayer;
@@ -779,20 +784,22 @@ function drawNonUniformBorders(nativeView: NativeScriptUIView, background: Backg
 				borderLeftLayer = nativeView.borderLayer.sublayers[3];
 			}
 
-			const paths = generateNonUniformMultiColorBorderPaths(layerBounds, background, cappedOuterRadii);
+			if (!isAnimatingView) {
+				const paths = generateNonUniformMultiColorBorderPaths(layerBounds, background, cappedOuterRadii);
 
-			borderTopLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderTopLayer.path = paths[0];
-			borderRightLayer.fillColor = background.borderRightColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderRightLayer.path = paths[1];
-			borderBottomLayer.fillColor = background.borderBottomColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderBottomLayer.path = paths[2];
-			borderLeftLayer.fillColor = background.borderLeftColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderLeftLayer.path = paths[3];
+				borderTopLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+				borderTopLayer.path = paths[0];
+				borderRightLayer.fillColor = background.borderRightColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+				borderRightLayer.path = paths[1];
+				borderBottomLayer.fillColor = background.borderBottomColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+				borderBottomLayer.path = paths[2];
+				borderLeftLayer.fillColor = background.borderLeftColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+				borderLeftLayer.path = paths[3];
 
-			// Clip inner area to create borders
-			if (nativeView.borderLayer.mask instanceof CAShapeLayer) {
-				nativeView.borderLayer.mask.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
+				// Clip inner area to create borders
+				if (nativeView.borderLayer.mask instanceof CAShapeLayer) {
+					nativeView.borderLayer.mask.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
+				}
 			}
 		}
 	}
@@ -1084,6 +1091,7 @@ function drawBoxShadow(view: View): void {
 	const background = view.style.backgroundInternal;
 	const nativeView = <NativeScriptUIView>view.nativeViewProtected;
 	const layer = nativeView.layer;
+	const isAnimatingView: boolean = UIView.inheritedAnimationDuration > 0;
 
 	// There is no parent to add shadow to
 	if (!layer.superlayer) {
@@ -1119,7 +1127,7 @@ function drawBoxShadow(view: View): void {
 		if (!outerShadowContainerLayer.mask) {
 			outerShadowContainerLayer.mask = CAShapeLayer.new();
 		}
-		if (outerShadowContainerLayer.mask instanceof CAShapeLayer) {
+		if (!isAnimatingView && outerShadowContainerLayer.mask instanceof CAShapeLayer) {
 			outerShadowContainerLayer.mask.path = layer.mask.path;
 		}
 	}
@@ -1140,7 +1148,6 @@ function drawBoxShadow(view: View): void {
 			const spreadRadius = layout.toDeviceIndependentPixels(boxShadow.spreadRadius);
 			const offsetX = layout.toDeviceIndependentPixels(boxShadow.offsetX);
 			const offsetY = layout.toDeviceIndependentPixels(boxShadow.offsetY);
-			const { maskPath, shadowPath } = ios.generateShadowLayerPaths(view, bounds);
 
 			shadowLayer.allowsEdgeAntialiasing = true;
 			shadowLayer.contentsScale = Screen.mainScreen.scale;
@@ -1151,12 +1158,16 @@ function drawBoxShadow(view: View): void {
 			shadowLayer.shadowColor = boxShadow.color?.ios?.CGColor;
 			shadowLayer.shadowOffset = CGSizeMake(offsetX, offsetY);
 
-			// Apply spread radius by expanding shadow layer bounds (this has a nice glow with radii set to 0)
-			shadowLayer.shadowPath = shadowPath;
+			if (!isAnimatingView) {
+				const { maskPath, shadowPath } = ios.generateShadowLayerPaths(view, bounds);
 
-			// A mask that ensures that view maintains transparent background
-			if (shadowLayer.mask instanceof CAShapeLayer) {
-				shadowLayer.mask.path = maskPath;
+				// Apply spread radius by expanding shadow layer bounds (this has a nice glow with radii set to 0)
+				shadowLayer.shadowPath = shadowPath;
+
+				// A mask that ensures that view maintains transparent background
+				if (shadowLayer.mask instanceof CAShapeLayer) {
+					shadowLayer.mask.path = maskPath;
+				}
 			}
 		}
 	}

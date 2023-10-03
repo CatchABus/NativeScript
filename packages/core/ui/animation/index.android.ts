@@ -1,9 +1,10 @@
 // Types.
-import { AnimationDefinitionInternal, AnimationPromise, PropertyAnimation } from './animation-common';
+import { AnimationDefinitionInternal, AnimationCurve, AnimationPromise, PropertyAnimation } from './animation-common';
 import { View } from '../core/view';
 
 // Requires
-import { AnimationBase, Properties, CubicBezierAnimationCurve } from './animation-common';
+import { AnimationBase, Properties } from './animation-common';
+import { CubicBezierAnimationCurve } from './cubic-bezier-animation-curve';
 import { Color } from '../../color';
 import { Trace } from '../../trace';
 import { opacityProperty, backgroundColorProperty, rotateProperty, rotateXProperty, rotateYProperty, translateXProperty, translateYProperty, scaleXProperty, scaleYProperty, heightProperty, widthProperty, PercentLength } from '../styling/style-properties';
@@ -28,7 +29,7 @@ const easeInOut = lazy(() => new android.view.animation.AccelerateDecelerateInte
 const linear = lazy(() => new android.view.animation.LinearInterpolator());
 const bounce = lazy(() => new android.view.animation.BounceInterpolator());
 
-export function _resolveAnimationCurve(curve: string | CubicBezierAnimationCurve | android.view.animation.Interpolator | android.view.animation.LinearInterpolator): android.view.animation.Interpolator {
+export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): android.view.animation.Interpolator {
 	switch (curve) {
 		case 'easeIn':
 			if (Trace.isEnabled()) {
@@ -68,10 +69,6 @@ export function _resolveAnimationCurve(curve: string | CubicBezierAnimationCurve
 			}
 			if (curve instanceof CubicBezierAnimationCurve) {
 				return (<any>androidx).core.view.animation.PathInterpolatorCompat.create(curve.x1, curve.y1, curve.x2, curve.y2);
-			} else if (curve && (<any>curve).getInterpolation) {
-				return <android.view.animation.Interpolator>curve;
-			} else if (<any>curve instanceof android.view.animation.LinearInterpolator) {
-				return <android.view.animation.Interpolator>curve;
 			} else {
 				throw new Error(`Invalid animation curve: ${curve}`);
 			}
@@ -204,7 +201,7 @@ export class Animation extends AnimationBase {
 		this._animatorSet.cancel();
 	}
 
-	public _resolveAnimationCurve(curve: string | CubicBezierAnimationCurve | android.view.animation.Interpolator): android.view.animation.Interpolator {
+	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): android.view.animation.Interpolator {
 		return _resolveAnimationCurve(curve);
 	}
 
@@ -502,8 +499,8 @@ export class Animation extends AnimationBase {
 			}
 
 			// Interpolator
-			if (propertyAnimation.curve != null) {
-				animators[i].setInterpolator(propertyAnimation.curve);
+			if (propertyAnimation.nativeCurve != null) {
+				animators[i].setInterpolator(propertyAnimation.nativeCurve);
 			}
 
 			if (Trace.isEnabled()) {

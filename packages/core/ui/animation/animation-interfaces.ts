@@ -2,6 +2,7 @@
 import { View } from '../core/view';
 import { CoreTypes } from '../../core-types';
 import { Color } from '../../color';
+import { CubicBezierAnimationCurve } from './cubic-bezier-animation-curve';
 
 export type Transformation = {
 	property: TransformationType;
@@ -17,6 +18,8 @@ export type TransformFunctionsInfo = {
 	rotate: number;
 	scale: Pair;
 };
+
+export type AnimationCurve = 'ease' | 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'spring';
 
 export interface AnimationPromise extends Promise<any>, Cancelable {
 	then(...args): AnimationPromise;
@@ -39,7 +42,8 @@ export interface PropertyAnimation {
 	duration?: number;
 	delay?: number;
 	iterations?: number;
-	curve?: any;
+	curve?: AnimationCurve | CubicBezierAnimationCurve;
+	nativeCurve?: any;
 }
 
 export interface PropertyAnimationInfo extends PropertyAnimation {
@@ -59,7 +63,7 @@ export interface AnimationDefinition {
 	duration?: number;
 	delay?: number;
 	iterations?: number;
-	curve?: any;
+	curve?: AnimationCurve | CubicBezierAnimationCurve;
 }
 
 export interface AnimationDefinitionInternal extends AnimationDefinition {

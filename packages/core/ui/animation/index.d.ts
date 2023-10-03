@@ -4,6 +4,19 @@ import { Color } from '../../color';
 
 export { KeyframeAnimation, KeyframeAnimationInfo, KeyframeDeclaration, KeyframeInfo } from './keyframe-animation';
 
+export type AnimationCurve = 'ease' | 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'spring';
+
+export class CubicBezierAnimationCurve {
+	public x1: number;
+	public y1: number;
+	public x2: number;
+	public y2: number;
+
+	constructor(x1: number, y1: number, x2: number, y2: number);
+
+	public equals(value: CubicBezierAnimationCurve): boolean;
+}
+
 /**
  * Defines animation options for the View.animate method.
  */
@@ -69,20 +82,7 @@ export interface AnimationDefinition {
 	 * An optional animation curve. Possible values are contained in the [AnimationCurve enumeration](../modules/_ui_enums_.animationcurve.html).
 	 * Alternatively, you can pass an instance of type UIViewAnimationCurve for iOS or android.animation.TimeInterpolator for Android.
 	 */
-	curve?: any;
-}
-
-/**
- * Defines a custom animation timing curve by using the cubic-bezier function.
- * Possible values are numeric values from 0 to 1
- */
-export class CubicBezierAnimationCurve {
-	public x1: number;
-	public y1: number;
-	public x2: number;
-	public y2: number;
-
-	constructor(x1: number, y1: number, x2: number, y2: number);
+	curve?: AnimationCurve | CubicBezierAnimation;
 }
 
 /**
@@ -147,7 +147,7 @@ export class Animation {
 	public cancel: () => void;
 	public isPlaying: boolean;
 	public isCancelled: boolean;
-	public _resolveAnimationCurve(curve: any): any;
+	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): any;
 }
 
 export function _resolveAnimationCurve(curve: any): any;

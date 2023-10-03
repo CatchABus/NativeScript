@@ -1,6 +1,7 @@
 // Types.
-import { CubicBezierAnimationCurve as CubicBezierAnimationCurveDefinition, Animation as AnimationBaseDefinition, Point3D } from '.';
-import { AnimationDefinition, AnimationPromise as AnimationPromiseDefinition, Pair, PropertyAnimation } from './animation-interfaces';
+import { Animation as AnimationBaseDefinition, Point3D } from '.';
+import { AnimationDefinition, AnimationCurve, AnimationPromise as AnimationPromiseDefinition, Pair, PropertyAnimation } from './animation-interfaces';
+import { CubicBezierAnimationCurve } from './cubic-bezier-animation-curve';
 
 // Requires.
 import { Color } from '../../color';
@@ -26,20 +27,6 @@ export enum AnimationState {
 	FINISHED,
 }
 
-export class CubicBezierAnimationCurve implements CubicBezierAnimationCurveDefinition {
-	public x1: number;
-	public y1: number;
-	public x2: number;
-	public y2: number;
-
-	constructor(x1: number, y1: number, x2: number, y2: number) {
-		this.x1 = x1;
-		this.y1 = y1;
-		this.x2 = x2;
-		this.y2 = y2;
-	}
-}
-
 export abstract class AnimationBase implements AnimationBaseDefinition {
 	public _propertyAnimations: Array<PropertyAnimation>;
 	public _playSequentially: boolean;
@@ -59,10 +46,10 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 
 		this._propertyAnimations = new Array<PropertyAnimation>();
 		for (let i = 0, length = animationDefinitions.length; i < length; i++) {
-			if (animationDefinitions[i].curve) {
-				animationDefinitions[i].curve = this._resolveAnimationCurve(animationDefinitions[i].curve);
+			if (!animationDefinitions[i].curve) {
+				animationDefinitions[i].curve = 'ease';
 			}
-			this._propertyAnimations = this._propertyAnimations.concat(AnimationBase._createPropertyAnimations(animationDefinitions[i]));
+			this._propertyAnimations = this._propertyAnimations.concat(this._createPropertyAnimations(animationDefinitions[i]));
 		}
 
 		if (this._propertyAnimations.length === 0) {
@@ -78,7 +65,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		this._playSequentially = playSequentially;
 	}
 
-	abstract _resolveAnimationCurve(curve: any): any;
+	abstract _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): any;
 
 	protected _rejectAlreadyPlaying(): AnimationPromiseDefinition {
 		const reason = 'Animation is already playing.';
@@ -154,7 +141,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		this._state = AnimationState.CANCELLED;
 	}
 
-	private static _createPropertyAnimations(animationDefinition: AnimationDefinition): Array<PropertyAnimation> {
+	private _createPropertyAnimations(animationDefinition: AnimationDefinition): Array<PropertyAnimation> {
 		if (!animationDefinition.target) {
 			Trace.write('No animation target specified', Trace.categories.Animation, Trace.messageType.error);
 			return;
@@ -162,7 +149,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 
 		for (const item in animationDefinition) {
 			const value = animationDefinition[item];
-			if (value === undefined) {
+			if (value == null) {
 				continue;
 			}
 
@@ -188,9 +175,10 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		}
 
 		const propertyAnimations = new Array<PropertyAnimation>();
+		const nativeCurve = this._resolveAnimationCurve(animationDefinition.curve);
 
 		// opacity
-		if (animationDefinition.opacity !== undefined) {
+		if (animationDefinition.opacity != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.opacity,
@@ -199,11 +187,12 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// backgroundColor
-		if (animationDefinition.backgroundColor !== undefined) {
+		if (animationDefinition.backgroundColor != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.backgroundColor,
@@ -212,11 +201,12 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// translate
-		if (animationDefinition.translate !== undefined) {
+		if (animationDefinition.translate != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.translate,
@@ -225,11 +215,12 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// scale
-		if (animationDefinition.scale !== undefined) {
+		if (animationDefinition.scale != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.scale,
@@ -238,18 +229,14 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// rotate
-		if (animationDefinition.rotate !== undefined) {
+		if (animationDefinition.rotate != null) {
 			// Make sure the value of the rotation property is always Point3D
-			let rotationValue: Point3D;
-			if (typeof animationDefinition.rotate === 'number') {
-				rotationValue = { x: 0, y: 0, z: animationDefinition.rotate };
-			} else {
-				rotationValue = animationDefinition.rotate;
-			}
+			const rotationValue: Point3D = typeof animationDefinition.rotate === 'number' ? { x: 0, y: 0, z: animationDefinition.rotate } : animationDefinition.rotate;
 
 			propertyAnimations.push({
 				target: animationDefinition.target,
@@ -259,11 +246,12 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// height
-		if (animationDefinition.height !== undefined) {
+		if (animationDefinition.height != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.height,
@@ -272,11 +260,12 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
 		// width
-		if (animationDefinition.width !== undefined) {
+		if (animationDefinition.width != null) {
 			propertyAnimations.push({
 				target: animationDefinition.target,
 				property: Properties.width,
@@ -285,6 +274,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 				delay: animationDefinition.delay,
 				iterations: animationDefinition.iterations,
 				curve: animationDefinition.curve,
+				nativeCurve,
 			});
 		}
 
