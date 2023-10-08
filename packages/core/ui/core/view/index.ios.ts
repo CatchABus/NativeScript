@@ -444,8 +444,9 @@ export class View extends ViewCommon implements ViewDefinition {
 		CATransaction.setDisableActions(true);
 
 		nativeView.layer.anchorPoint = newPoint;
+		// Updating anchor point will also affect frame
 		if (this._cachedFrame) {
-			this._setNativeViewFrame(nativeView, this._cachedFrame);
+			this._setNativeViewFrame(nativeView, nativeView.frame);
 		}
 
 		// Make sure new origin also applies to outer shadow layers
