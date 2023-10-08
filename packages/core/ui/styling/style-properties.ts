@@ -224,8 +224,17 @@ export const widthProperty = new CssAnimationProperty<Style, CoreTypes.PercentLe
 	name: 'width',
 	cssName: 'width',
 	defaultValue: 'auto',
-	affectsLayout: global.isIOS,
 	equalityComparer: Length.equals,
+	// TODO: CSSAnimationProperty was needed for keyframe (copying other impls), but `affectsLayout` does not exist
+	//       on the animation property, so fake it here. x_x
+	valueChanged: (target, oldValue, newValue) => {
+		if (global.isIOS) {
+			const view = target.viewRef.get();
+			if (view) {
+				view.requestLayout();
+			}
+		}
+	},
 	valueConverter: PercentLength.parse,
 });
 widthProperty.register(Style);
@@ -234,8 +243,17 @@ export const heightProperty = new CssAnimationProperty<Style, CoreTypes.PercentL
 	name: 'height',
 	cssName: 'height',
 	defaultValue: 'auto',
-	affectsLayout: global.isIOS,
 	equalityComparer: Length.equals,
+	// TODO: CSSAnimationProperty was needed for keyframe (copying other impls), but `affectsLayout` does not exist
+	//       on the animation property, so fake it here. -_-
+	valueChanged: (target, oldValue, newValue) => {
+		if (global.isIOS) {
+			const view = target.viewRef.get();
+			if (view) {
+				view.requestLayout();
+			}
+		}
+	},
 	valueConverter: PercentLength.parse,
 });
 heightProperty.register(Style);
