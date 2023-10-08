@@ -18,10 +18,20 @@ import { Screen } from '../../platform';
 export * from './animation-common';
 export { KeyframeAnimation, KeyframeAnimationInfo, KeyframeDeclaration, KeyframeInfo } from './keyframe-animation';
 
+type iOSAnimationFunction = (animation: Animation) => void;
+
+interface SpringTimingParameters {
+	mass: number;
+	stiffness: number;
+	damping: number;
+	settlingDuration?: number;
+}
+
 const _transform = '_transform';
 const _skip = '_skip';
 
-type iOSAnimationFunction = (animation: Animation) => void;
+// Used to cache default CASpringAnimation values
+let _springTimingDefaults: SpringTimingParameters;
 
 class AnimationInfo {
 	public propertyNameToAnimate: string;
@@ -31,7 +41,6 @@ class AnimationInfo {
 	public duration: number;
 	public repeatCount: number;
 	public delay: number;
-	public affectsLayout: boolean;
 }
 
 interface CurveNativeValues {
@@ -39,8 +48,50 @@ interface CurveNativeValues {
 	view: UITimingCurveProvider;
 }
 
-export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): CurveNativeValues {
+function calculateAnimationDuration(duration: number): number {
+	return duration != null ? duration / 1000.0 : 0.3;
+}
+
+/**
+ * Calculates spring timing values based on animation duration.
+ *
+ * @param duration
+ * @returns
+ */
+function calculateSpringTimingParameters(duration: number): SpringTimingParameters {
+	// Cache spring animation defaults
+	if (!_springTimingDefaults) {
+		const nativeAnimation = CASpringAnimation.animation();
+		_springTimingDefaults = {
+			mass: nativeAnimation.mass,
+			stiffness: nativeAnimation.stiffness,
+			damping: nativeAnimation.damping,
+			settlingDuration: nativeAnimation.settlingDuration,
+		};
+	}
+
+	if (!duration) {
+		return _springTimingDefaults;
+	}
+
+	// The following formula helps on scaling spring effect values.
+	// When these values are used by a spring animation, its settling duration will almost be identical to requested duration.
+	const durationScaleValue = duration / _springTimingDefaults.settlingDuration;
+
+	const mass = _springTimingDefaults.mass * durationScaleValue;
+	const stiffness = _springTimingDefaults.stiffness / durationScaleValue;
+	const damping = _springTimingDefaults.damping / durationScaleValue;
+
+	return {
+		mass,
+		stiffness,
+		damping,
+	};
+}
+
+export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): CurveNativeValues {
 	let values: CurveNativeValues;
+	const durationInSeconds = calculateAnimationDuration(duration);
 
 	switch (curve) {
 		case 'easeIn':
@@ -68,15 +119,16 @@ export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimat
 			};
 			break;
 		case 'spring':
+			const { mass, stiffness, damping } = calculateSpringTimingParameters(durationInSeconds);
 			values = {
-				layer: null,
-				view: UISpringTimingParameters.alloc().initWithDampingRatio(0.2),
+				layer: CAMediaTimingFunction.functionWithName(kCAMediaTimingFunctionLinear),
+				view: UISpringTimingParameters.alloc().initWithMassStiffnessDampingInitialVelocity(mass, stiffness, damping, new CGVector({ dx: 0, dy: 0 })),
 			};
 			break;
 		case 'ease':
 			const controlPoint = CGPointMake(0.25, 0.1);
 			values = {
-				layer: CAMediaTimingFunction.functionWithControlPoints(controlPoint.x, controlPoint.y, controlPoint.x, controlPoint.y),
+				layer: CAMediaTimingFunction.functionWithName(kCAMediaTimingFunctionDefault),
 				view: UICubicTimingParameters.alloc().initWithControlPoint1ControlPoint2(controlPoint, controlPoint),
 			};
 			break;
@@ -141,7 +193,7 @@ export class Animation extends AnimationBase {
 		if (this._playSequentially) {
 			// This function will be called by the last animation when done or by another animation if the user cancels them halfway through.
 			if (!isInterrupted) {
-				this._resolveAnimationFinishedPromise();
+				this._resolveAnimationFinishedPromise(true);
 			}
 		} else {
 			// This callback will be called by each INDIVIDUAL animation when it finishes or is cancelled.
@@ -155,11 +207,12 @@ export class Animation extends AnimationBase {
 				if (Trace.isEnabled()) {
 					Trace.write(this._cancelledAnimations + ' animations cancelled.', Trace.categories.Animation);
 				}
+				this._resolveAnimationFinishedPromise(false);
 			} else if (this._finishedAnimations === this._mergedPropertyAnimations.length) {
 				if (Trace.isEnabled()) {
 					Trace.write(this._finishedAnimations + ' animations finished.', Trace.categories.Animation);
 				}
-				this._resolveAnimationFinishedPromise();
+				this._resolveAnimationFinishedPromise(true);
 			}
 		}
 	}
@@ -206,8 +259,8 @@ export class Animation extends AnimationBase {
 		}
 	}
 
-	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): CurveNativeValues {
-		return _resolveAnimationCurve(curve);
+	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): CurveNativeValues {
+		return _resolveAnimationCurve(curve, duration);
 	}
 
 	private static _createiOSAnimationFunction(propertyAnimations: Array<PropertyAnimation>, index: number, playSequentially: boolean): iOSAnimationFunction {
@@ -223,8 +276,8 @@ export class Animation extends AnimationBase {
 			const animationInfo = propertyAnimations[index];
 			const args = animation._getNativeAnimationArguments(animationInfo);
 
-			// Avoid relying on CASpringAnimation for spring curve as its behaviour is a lot different than UIView animation's
-			if (args.affectsLayout || animationInfo.curve === 'spring') {
+			// For now, we use view animations to update bounds (suitable for layout updates)
+			if (args.propertyNameToAnimate === 'bounds') {
 				animation._createNativeViewAnimation(propertyAnimations, index, playSequentially, args, animationInfo);
 			} else {
 				animation._createNativeLayerAnimation(propertyAnimations, index, playSequentially, args, animationInfo);
@@ -242,7 +295,6 @@ export class Animation extends AnimationBase {
 		let subPropertiesToAnimate;
 		let toValue = animationInfo.value;
 		let fromValue;
-		let affectsLayout;
 		if (nativeView) {
 			const setKeyFrame = this._valueSource === 'keyframe';
 
@@ -254,7 +306,6 @@ export class Animation extends AnimationBase {
 					};
 
 					fromValue = nativeView.layer.backgroundColor;
-					affectsLayout = backgroundColorProperty.affectsLayout;
 
 					if (nativeView instanceof UILabel) {
 						nativeView.setValueForKey(UIColor.clearColor, 'backgroundColor');
@@ -268,7 +319,6 @@ export class Animation extends AnimationBase {
 					};
 
 					fromValue = nativeView.layer.opacity;
-					affectsLayout = opacityProperty.affectsLayout;
 					break;
 				case Properties.rotate:
 					animationInfo._originalValue = {
@@ -306,7 +356,6 @@ export class Animation extends AnimationBase {
 						y: (toValue.y * Math.PI) / 180,
 						z: (toValue.z * Math.PI) / 180,
 					};
-					affectsLayout = rotateXProperty.affectsLayout || rotateYProperty.affectsLayout || rotateProperty.affectsLayout;
 					break;
 				case Properties.translate:
 					animationInfo._originalValue = {
@@ -320,7 +369,6 @@ export class Animation extends AnimationBase {
 					propertyNameToAnimate = 'transform';
 					fromValue = NSValue.valueWithCATransform3D(nativeView.layer.transform);
 					toValue = NSValue.valueWithCATransform3D(CATransform3DTranslate(nativeView.layer.transform, toValue.x, toValue.y, 0));
-					affectsLayout = translateXProperty.affectsLayout || translateYProperty.affectsLayout;
 					break;
 				case Properties.scale:
 					if (toValue.x === 0) {
@@ -337,7 +385,6 @@ export class Animation extends AnimationBase {
 					propertyNameToAnimate = 'transform';
 					fromValue = NSValue.valueWithCATransform3D(nativeView.layer.transform);
 					toValue = NSValue.valueWithCATransform3D(CATransform3DScale(nativeView.layer.transform, toValue.x, toValue.y, 1));
-					affectsLayout = scaleXProperty.affectsLayout || scaleYProperty.affectsLayout;
 					break;
 				case _transform:
 					fromValue = NSValue.valueWithCATransform3D(nativeView.layer.transform);
@@ -361,7 +408,6 @@ export class Animation extends AnimationBase {
 					};
 					propertyNameToAnimate = 'transform';
 					toValue = NSValue.valueWithCATransform3D(Animation._createNativeAffineTransform(animationInfo));
-					affectsLayout = translateXProperty.affectsLayout || translateYProperty.affectsLayout || scaleXProperty.affectsLayout || scaleYProperty.affectsLayout || rotateXProperty.affectsLayout || rotateYProperty.affectsLayout || rotateProperty.affectsLayout;
 					break;
 				case Properties.width: {
 					if (!parent) {
@@ -380,7 +426,6 @@ export class Animation extends AnimationBase {
 					fromValue = NSValue.valueWithCGRect(bounds);
 					toValue = NSValue.valueWithCGRect(CGRectMake(bounds.origin.x, bounds.origin.y, newWidth, bounds.size.height));
 					propertyNameToAnimate = 'bounds';
-					affectsLayout = widthProperty.affectsLayout;
 					break;
 				}
 				case Properties.height: {
@@ -400,20 +445,15 @@ export class Animation extends AnimationBase {
 					fromValue = NSValue.valueWithCGRect(bounds);
 					toValue = NSValue.valueWithCGRect(CGRectMake(bounds.origin.x, bounds.origin.y, bounds.size.width, newHeight));
 					propertyNameToAnimate = 'bounds';
-					affectsLayout = heightProperty.affectsLayout;
 					break;
 				}
 				default:
-					affectsLayout = false;
 					Trace.write(`Animating property '${animationInfo.property}' is not supported`, Trace.categories.Animation, Trace.messageType.error);
 					break;
 			}
 		}
 
-		let duration = 0.3;
-		if (animationInfo.duration != null) {
-			duration = animationInfo.duration / 1000.0;
-		}
+		const duration = calculateAnimationDuration(animationInfo.duration);
 
 		let delay;
 		if (animationInfo.delay) {
@@ -437,7 +477,6 @@ export class Animation extends AnimationBase {
 			duration,
 			repeatCount,
 			delay,
-			affectsLayout,
 		};
 	}
 
@@ -566,18 +605,33 @@ export class Animation extends AnimationBase {
 	}
 
 	private _createCABasicAnimation(args: AnimationInfo, animationInfo: PropertyAnimation): CABasicAnimation {
-		const nativeAnimation: CABasicAnimation = CABasicAnimation.animationWithKeyPath(args.propertyNameToAnimate);
+		let nativeAnimation: CABasicAnimation;
+		if (animationInfo.curve === 'spring') {
+			const springAnimation = CASpringAnimation.animationWithKeyPath(args.propertyNameToAnimate);
+
+			const { mass, stiffness, damping } = calculateSpringTimingParameters(args.duration);
+			springAnimation.mass = mass;
+			springAnimation.stiffness = stiffness;
+			springAnimation.damping = damping;
+			springAnimation.duration = springAnimation.settlingDuration;
+
+			nativeAnimation = springAnimation;
+		} else {
+			nativeAnimation = CABasicAnimation.animationWithKeyPath(args.propertyNameToAnimate);
+			nativeAnimation.duration = args.duration;
+		}
+
 		nativeAnimation.fromValue = args.fromValue;
 		nativeAnimation.toValue = args.toValue;
-		nativeAnimation.duration = args.duration;
+
+		if (animationInfo.nativeCurve != null) {
+			nativeAnimation.timingFunction = animationInfo.nativeCurve.layer;
+		}
 		if (args.repeatCount != null) {
 			nativeAnimation.repeatCount = args.repeatCount;
 		}
 		if (args.delay != null) {
 			nativeAnimation.beginTime = CACurrentMediaTime() + args.delay;
-		}
-		if (animationInfo.nativeCurve != null) {
-			nativeAnimation.timingFunction = animationInfo.nativeCurve.layer;
 		}
 
 		return nativeAnimation;
@@ -586,6 +640,7 @@ export class Animation extends AnimationBase {
 	private _createNativeViewAnimation(propertyAnimations: Array<PropertyAnimationInfo>, index: number, playSequentially: boolean, args: AnimationInfo, animationInfo: PropertyAnimationInfo) {
 		const nativeView: NativeScriptUIView = animationInfo.target.nativeViewProtected;
 		const setKeyFrame = this._valueSource === 'keyframe';
+		const isAnimatingViewBounds = args.propertyNameToAnimate === 'bounds';
 
 		let nextAnimation;
 		if (index + 1 < propertyAnimations.length) {
@@ -602,6 +657,14 @@ export class Animation extends AnimationBase {
 			delay = args.delay;
 		}
 
+		const originalOriginX = animationInfo.target.originX;
+		const originalOriginY = animationInfo.target.originY;
+		// For some layers to animate properly (e.g. shadow layers that don't belong to view layer tree),
+		// we set view origin to zero during animation
+		if (isAnimatingViewBounds) {
+			Animation.updateViewOrigin(animationInfo, 0, 0);
+		}
+
 		const animateCallback = () => {
 			if (args.repeatCount != null) {
 				UIView.setAnimationRepeatCount(args.repeatCount);
@@ -614,11 +677,11 @@ export class Animation extends AnimationBase {
 				case Properties.opacity:
 					animationInfo.target.opacity = animationInfo.value;
 					break;
-				case Properties.height:
-					animationInfo.target.height = animationInfo.value;
-					break;
 				case Properties.width:
 					animationInfo.target.width = animationInfo.value;
+					break;
+				case Properties.height:
+					animationInfo.target.height = animationInfo.value;
 					break;
 				case _transform:
 					animationInfo._originalValue = nativeView.layer.transform;
@@ -629,19 +692,25 @@ export class Animation extends AnimationBase {
 						nativeView.outerShadowContainerLayer.setValueForKey(args.toValue, args.propertyNameToAnimate);
 					}
 
-					animationInfo._propertyResetCallback = function (value) {
+					animationInfo._propertyResetCallback = (value) => {
 						nativeView.layer.transform = value;
 					};
 					break;
 			}
 
-			if (args.affectsLayout) {
+			if (isAnimatingViewBounds) {
 				(animationInfo.target.page || animationInfo.target).nativeViewProtected.layoutIfNeeded();
 			}
 		};
 
 		const completionCallback = (position: UIViewAnimatingPosition) => {
 			const isFinished: boolean = position === UIViewAnimatingPosition.End;
+
+			// Reset origin point back to its original value
+			if (isAnimatingViewBounds) {
+				Animation.updateViewOrigin(animationInfo, originalOriginX, originalOriginY);
+			}
+
 			if (isFinished) {
 				if (animationInfo.property === _transform) {
 					if (animationInfo.value[Properties.translate] != null) {
@@ -676,7 +745,7 @@ export class Animation extends AnimationBase {
 		animator.addCompletion(completionCallback);
 		animator.startAnimationAfterDelay(args.delay);
 
-		if (args.propertyNameToAnimate === 'bounds') {
+		if (isAnimatingViewBounds) {
 			this.animateLayers(nativeView, args.toValue.CGRectValue, animationInfo, args);
 		}
 	}
@@ -861,6 +930,17 @@ export class Animation extends AnimationBase {
 					}
 				}
 			}
+		}
+	}
+
+	private static updateViewOrigin(animationInfo: PropertyAnimationInfo, originX: number, originY: number) {
+		switch (animationInfo.property) {
+			case Properties.width:
+				animationInfo.target.originX = originX;
+				break;
+			case Properties.height:
+				animationInfo.target.originY = originY;
+				break;
 		}
 	}
 

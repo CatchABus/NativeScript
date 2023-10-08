@@ -65,7 +65,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		this._playSequentially = playSequentially;
 	}
 
-	abstract _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): any;
+	abstract _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): any;
 
 	protected _rejectAlreadyPlaying(): AnimationPromiseDefinition {
 		const reason = 'Animation is already playing.';
@@ -127,14 +127,9 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		return this._state === AnimationState.CANCELLED;
 	}
 
-	public _resolveAnimationFinishedPromise() {
-		this._state = AnimationState.FINISHED;
-		this._resolve();
-	}
-
-	public _rejectAnimationFinishedPromise() {
-		this._markAsCancelled();
-		this._reject(new Error('Animation cancelled.'));
+	public _resolveAnimationFinishedPromise(isFinished: boolean) {
+		this._state = isFinished ? AnimationState.FINISHED : AnimationState.CANCELLED;
+		this._resolve(isFinished);
 	}
 
 	public _markAsCancelled() {
@@ -175,7 +170,7 @@ export abstract class AnimationBase implements AnimationBaseDefinition {
 		}
 
 		const propertyAnimations = new Array<PropertyAnimation>();
-		const nativeCurve = this._resolveAnimationCurve(animationDefinition.curve);
+		const nativeCurve = this._resolveAnimationCurve(animationDefinition.curve, animationDefinition.duration);
 
 		// opacity
 		if (animationDefinition.opacity != null) {

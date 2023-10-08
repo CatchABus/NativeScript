@@ -147,7 +147,7 @@ export class Animation {
 	public cancel: () => void;
 	public isPlaying: boolean;
 	public isCancelled: boolean;
-	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): any;
+	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): any;
 }
 
-export function _resolveAnimationCurve(curve: any): any;
+export function _resolveAnimationCurve(curve: any, duration: number): any;

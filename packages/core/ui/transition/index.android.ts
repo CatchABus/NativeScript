@@ -18,7 +18,7 @@ export class Transition implements TransitionType {
 
 	constructor(duration: number = 350, curve?: any) {
 		this._duration = duration;
-		this._interpolator = curve ? _resolveAnimationCurve(curve) : _defaultInterpolator();
+		this._interpolator = curve ? _resolveAnimationCurve(curve, duration) : _defaultInterpolator();
 		transitionId++;
 		this.id = transitionId;
 	}

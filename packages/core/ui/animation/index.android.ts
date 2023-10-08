@@ -29,7 +29,7 @@ const easeInOut = lazy(() => new android.view.animation.AccelerateDecelerateInte
 const linear = lazy(() => new android.view.animation.LinearInterpolator());
 const bounce = lazy(() => new android.view.animation.BounceInterpolator());
 
-export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): android.view.animation.Interpolator {
+export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): android.view.animation.Interpolator {
 	switch (curve) {
 		case 'easeIn':
 			if (Trace.isEnabled()) {
@@ -201,8 +201,8 @@ export class Animation extends AnimationBase {
 		this._animatorSet.cancel();
 	}
 
-	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve): android.view.animation.Interpolator {
-		return _resolveAnimationCurve(curve);
+	public _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimationCurve, duration: number): android.view.animation.Interpolator {
+		return _resolveAnimationCurve(curve, duration);
 	}
 
 	protected _play(): void {
@@ -235,7 +235,7 @@ export class Animation extends AnimationBase {
 		}
 
 		this._propertyUpdateCallbacks.forEach((v) => v());
-		this._resolveAnimationFinishedPromise();
+		this._resolveAnimationFinishedPromise(true);
 
 		if (this._resetOnFinish && this._target) {
 			this._target._removeAnimation(this);
@@ -245,7 +245,7 @@ export class Animation extends AnimationBase {
 	private _onAndroidAnimationCancel() {
 		// tslint:disable-line
 		this._propertyResetCallbacks.forEach((v) => v());
-		this._rejectAnimationFinishedPromise();
+		this._resolveAnimationFinishedPromise(false);
 
 		if (this._target) {
 			this._target._removeAnimation(this);

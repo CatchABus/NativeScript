@@ -676,7 +676,7 @@ function setUpNativeTransition(navigationTransition: NavigationTransition, nativ
 		nativeTransition.setDuration(navigationTransition.duration);
 	}
 
-	const interpolator = navigationTransition.curve ? _resolveAnimationCurve(navigationTransition.curve) : defaultInterpolator();
+	const interpolator = navigationTransition.curve ? _resolveAnimationCurve(navigationTransition.curve, navigationTransition.duration) : defaultInterpolator();
 	nativeTransition.setInterpolator(interpolator);
 }
 
