@@ -578,19 +578,11 @@ export class Animation extends AnimationBase {
 	private _createGroupAnimation(args: AnimationInfo, animation: PropertyAnimation) {
 		const groupAnimation = CAAnimationGroup.new();
 		groupAnimation.duration = args.duration;
-		if (args.repeatCount != null) {
-			groupAnimation.repeatCount = args.repeatCount;
-		}
-		if (args.delay != null) {
-			groupAnimation.beginTime = CACurrentMediaTime() + args.delay;
-		}
-		if (animation.nativeCurve != null) {
-			groupAnimation.timingFunction = animation.nativeCurve.layer;
-		}
-		const animations = NSMutableArray.alloc<CAAnimation>().initWithCapacity(3);
+
+		const animations = NSMutableArray.alloc<CAAnimation>().initWithCapacity(args.subPropertiesToAnimate.length);
 
 		args.subPropertiesToAnimate.forEach((property) => {
-			const basicAnimationArgs = { ...args, duration: undefined, repeatCount: undefined, delay: undefined, curve: undefined };
+			const basicAnimationArgs = { ...args };
 			basicAnimationArgs.propertyNameToAnimate = `${args.propertyNameToAnimate}.${property}`;
 			basicAnimationArgs.fromValue = args.fromValue[property];
 			basicAnimationArgs.toValue = args.toValue[property];
