@@ -128,7 +128,7 @@ export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimat
 		case 'ease':
 			const controlPoint = CGPointMake(0.25, 0.1);
 			values = {
-				layer: CAMediaTimingFunction.functionWithName(kCAMediaTimingFunctionDefault),
+				layer: CAMediaTimingFunction.functionWithControlPoints(controlPoint.x, controlPoint.y, controlPoint.x, controlPoint.y),
 				view: UICubicTimingParameters.alloc().initWithControlPoint1ControlPoint2(controlPoint, controlPoint),
 			};
 			break;
@@ -151,6 +151,7 @@ export function _resolveAnimationCurve(curve: AnimationCurve | CubicBezierAnimat
 }
 
 export class Animation extends AnimationBase {
+	private _nativeAnimatorsArray: Array<UIViewPropertyAnimator | CAAnimation>;
 	private _iOSAnimationFunction: Function;
 	private _finishedAnimations: number;
 	private _cancelledAnimations: number;
@@ -223,6 +224,11 @@ export class Animation extends AnimationBase {
 		}
 
 		const animationFinishedPromise = super.play();
+
+		if (!this._nativeAnimatorsArray) {
+			this._nativeAnimatorsArray = new Array(this._mergedPropertyAnimations.length);
+		}
+
 		this._finishedAnimations = 0;
 		this._cancelledAnimations = 0;
 		this._iOSAnimationFunction(this);
@@ -239,20 +245,73 @@ export class Animation extends AnimationBase {
 		this._markAsCancelled();
 
 		if (this._mergedPropertyAnimations) {
-			for (let i = 0; i < this._mergedPropertyAnimations.length; i++) {
-				const propertyAnimation = this._mergedPropertyAnimations[i];
-				if (propertyAnimation) {
-					if (propertyAnimation.target?.nativeViewProtected) {
-						const nativeView: NativeScriptUIView = propertyAnimation.target.nativeViewProtected;
-						nativeView.layer.removeAllAnimations();
+			for (let i = 0, length = this._mergedPropertyAnimations.length; i < length; i++) {
+				const animator = this._nativeAnimatorsArray[i];
+				const animationInfo = this._mergedPropertyAnimations[i];
+
+				if (animator instanceof UIViewPropertyAnimator) {
+					animator.stopAnimation(false);
+					animator.finishAnimationAtPosition(UIViewAnimatingPosition.End);
+				}
+
+				if (animationInfo) {
+					/**
+					 * Use animating property as a key for all animations so that it's easier to cancel them and only them when needed.
+					 */
+					const animationKey: string = animationInfo.property === Properties.height || animationInfo.property === Properties.width ? 'size' : animationInfo.property;
+
+					if (animationInfo.target?.nativeViewProtected?.layer) {
+						const nativeView: NativeScriptUIView = animationInfo.target.nativeViewProtected;
+						if (nativeView.layer.mask) {
+							nativeView.layer.mask.removeAnimationForKey(animationKey);
+						}
+						nativeView.layer.removeAnimationForKey(animationKey);
+
+						// Gradient background animations
+						if (nativeView.gradientLayer) {
+							nativeView.gradientLayer.removeAnimationForKey(animationKey);
+						}
+
+						// Border animations
+						if (nativeView.borderLayer) {
+							if (nativeView.borderLayer.mask) {
+								nativeView.borderLayer.mask.removeAnimationForKey(animationKey);
+							}
+
+							const borderLayers = nativeView.borderLayer.sublayers;
+							if (borderLayers?.count) {
+								for (let i = 0, count = borderLayers.count; i < count; i++) {
+									borderLayers[i].removeAnimationForKey(animationKey);
+								}
+							}
+
+							nativeView.borderLayer.removeAnimationForKey(animationKey);
+						}
 
 						// Shadow animations
 						if (nativeView.outerShadowContainerLayer) {
-							nativeView.outerShadowContainerLayer.removeAllAnimations();
+							if (nativeView.outerShadowContainerLayer.mask) {
+								nativeView.outerShadowContainerLayer.mask.removeAnimationForKey(animationKey);
+							}
+
+							const outerShadowLayers = nativeView.outerShadowContainerLayer.sublayers;
+							if (outerShadowLayers?.count) {
+								for (let i = 0, count = outerShadowLayers.count; i < count; i++) {
+									const shadowLayer = outerShadowLayers[i];
+
+									if (shadowLayer.mask) {
+										shadowLayer.mask.removeAnimationForKey(animationKey);
+									}
+									shadowLayer.removeAnimationForKey(animationKey);
+								}
+							}
+
+							nativeView.outerShadowContainerLayer.removeAnimationForKey(animationKey);
 						}
 					}
-					if (propertyAnimation._propertyResetCallback) {
-						propertyAnimation._propertyResetCallback(propertyAnimation._originalValue, this._valueSource);
+
+					if (animationInfo._propertyResetCallback) {
+						animationInfo._propertyResetCallback(animationInfo._originalValue, this._valueSource);
 					}
 				}
 			}
@@ -278,9 +337,9 @@ export class Animation extends AnimationBase {
 
 			// For now, we use view animations to update bounds (suitable for layout updates)
 			if (args.propertyNameToAnimate === 'bounds') {
-				animation._createNativeViewAnimation(propertyAnimations, index, playSequentially, args, animationInfo);
+				animation._animateView(propertyAnimations, index, playSequentially, args, animationInfo);
 			} else {
-				animation._createNativeLayerAnimation(propertyAnimations, index, playSequentially, args, animationInfo);
+				animation._animateLayer(propertyAnimations, index, playSequentially, args, animationInfo);
 			}
 		};
 	}
@@ -480,7 +539,7 @@ export class Animation extends AnimationBase {
 		};
 	}
 
-	private _createNativeLayerAnimation(propertyAnimations: Array<PropertyAnimation>, index: number, playSequentially: boolean, args: AnimationInfo, animationInfo: PropertyAnimation) {
+	private _animateLayer(propertyAnimations: Array<PropertyAnimation>, index: number, playSequentially: boolean, args: AnimationInfo, animationInfo: PropertyAnimation) {
 		const nativeView: NativeScriptUIView = animationInfo.target.nativeViewProtected;
 		if (!nativeView) {
 			return;
@@ -490,7 +549,12 @@ export class Animation extends AnimationBase {
 		const targetStyle = animationInfo.target.style;
 		const value = animationInfo.value;
 
-		const nativeAnimation = args.subPropertiesToAnimate ? this._createGroupAnimation(args, animationInfo) : this._createCABasicAnimation(args, animationInfo);
+		// Cache native animation so that it's not being recreated each time animation gets played
+		if (!this._nativeAnimatorsArray[index]) {
+			this._nativeAnimatorsArray[index] = args.subPropertiesToAnimate ? this._createGroupAnimation(args, animationInfo) : this._createCABasicAnimation(args, animationInfo);
+		}
+
+		const nativeAnimation = <CAAnimation>this._nativeAnimatorsArray[index];
 
 		let nextAnimation;
 
@@ -629,7 +693,12 @@ export class Animation extends AnimationBase {
 		return nativeAnimation;
 	}
 
-	private _createNativeViewAnimation(propertyAnimations: Array<PropertyAnimationInfo>, index: number, playSequentially: boolean, args: AnimationInfo, animationInfo: PropertyAnimationInfo) {
+	private _createUIViewPropertyAnimator(args: AnimationInfo, animationInfo: PropertyAnimation): UIViewPropertyAnimator {
+		const animator = UIViewPropertyAnimator.alloc().initWithDurationTimingParameters(args.duration, animationInfo.nativeCurve.view);
+		return animator;
+	}
+
+	private _animateView(propertyAnimations: Array<PropertyAnimationInfo>, index: number, playSequentially: boolean, args: AnimationInfo, animationInfo: PropertyAnimationInfo) {
 		const nativeView: NativeScriptUIView = animationInfo.target.nativeViewProtected;
 		const setKeyFrame = this._valueSource === 'keyframe';
 		const isAnimatingViewBounds = args.propertyNameToAnimate === 'bounds';
@@ -663,30 +732,11 @@ export class Animation extends AnimationBase {
 			}
 
 			switch (animationInfo.property) {
-				case Properties.backgroundColor:
-					animationInfo.target.backgroundColor = animationInfo.value;
-					break;
-				case Properties.opacity:
-					animationInfo.target.opacity = animationInfo.value;
-					break;
 				case Properties.width:
 					animationInfo.target.width = animationInfo.value;
 					break;
 				case Properties.height:
 					animationInfo.target.height = animationInfo.value;
-					break;
-				case _transform:
-					animationInfo._originalValue = nativeView.layer.transform;
-					nativeView.layer.setValueForKey(args.toValue, args.propertyNameToAnimate);
-
-					// Shadow layers do not inherit from animating view layer
-					if (nativeView.outerShadowContainerLayer) {
-						nativeView.outerShadowContainerLayer.setValueForKey(args.toValue, args.propertyNameToAnimate);
-					}
-
-					animationInfo._propertyResetCallback = (value) => {
-						nativeView.layer.transform = value;
-					};
 					break;
 			}
 
@@ -696,61 +746,56 @@ export class Animation extends AnimationBase {
 		};
 
 		const completionCallback = (position: UIViewAnimatingPosition) => {
-			const isFinished: boolean = position === UIViewAnimatingPosition.End;
+			const isInterrupted: boolean = position !== UIViewAnimatingPosition.End;
 
 			// Reset origin point back to its original value
 			if (isAnimatingViewBounds) {
 				Animation.updateViewOrigin(animationInfo, originalOriginX, originalOriginY);
 			}
 
-			if (isFinished) {
-				if (animationInfo.property === _transform) {
-					if (animationInfo.value[Properties.translate] != null) {
-						animationInfo.target.translateX = animationInfo.value[Properties.translate].x;
-						animationInfo.target.translateY = animationInfo.value[Properties.translate].y;
-					}
-					if (animationInfo.value[Properties.rotate] != null) {
-						animationInfo.target.rotateX = animationInfo.value[Properties.rotate].x;
-						animationInfo.target.rotateY = animationInfo.value[Properties.rotate].y;
-						animationInfo.target.rotate = animationInfo.value[Properties.rotate].z;
-					}
-					if (animationInfo.value[Properties.scale] != null) {
-						animationInfo.target.scaleX = animationInfo.value[Properties.scale].x;
-						animationInfo.target.scaleY = animationInfo.value[Properties.scale].y;
-					}
-				}
-			} else {
+			if (isInterrupted) {
 				if (animationInfo._propertyResetCallback) {
 					animationInfo._propertyResetCallback(animationInfo._originalValue);
 				}
 			}
 
-			this.animationFinishedCallback(!isFinished);
+			this.animationFinishedCallback(isInterrupted);
 
-			if (isFinished && nextAnimation && !this.isCancelled) {
+			if (!isInterrupted && nextAnimation && !this.isCancelled) {
 				nextAnimation(this);
 			}
 		};
 
-		const animator = UIViewPropertyAnimator.alloc().initWithDurationTimingParameters(args.duration, animationInfo.nativeCurve.view);
+		// Use cached native animations if any or cache them so that they won't be recreated each time animation gets played
+		if (!this._nativeAnimatorsArray[index]) {
+			this._nativeAnimatorsArray[index] = this._createUIViewPropertyAnimator(args, animationInfo);
+		}
+
+		const animator = <UIViewPropertyAnimator>this._nativeAnimatorsArray[index];
+		// Callbacks have to be set anew on every execution since animator gets cached
 		animator.addAnimations(animateCallback);
 		animator.addCompletion(completionCallback);
 		animator.startAnimationAfterDelay(args.delay);
 
 		if (isAnimatingViewBounds) {
-			this.animateLayers(nativeView, args.toValue.CGRectValue, animationInfo, args);
+			this.animateLayerSize(nativeView, args.toValue.CGRectValue, animationInfo, args);
 		}
 	}
 
-	private animateLayers(nativeView: NativeScriptUIView, bounds: CGRect, animationInfo: PropertyAnimation, args: AnimationInfo) {
+	private animateLayerSize(nativeView: NativeScriptUIView, bounds: CGRect, animationInfo: PropertyAnimation, args: AnimationInfo): void {
 		const view: View = animationInfo.target;
+		/**
+		 * Use animating property as a key for all animations so that it's easier to cancel them and only them when needed.
+		 * If a layer has multiple animations, we can use a CAAnimationGroup with the property as key.
+		 */
+		const key: string = animationInfo.property === Properties.height || animationInfo.property === Properties.width ? 'size' : animationInfo.property;
 
 		// Gradient background animation
 		if (nativeView.gradientLayer) {
 			const nativeAnimation = this._createCABasicAnimation(args, animationInfo);
 
 			nativeView.gradientLayer.bounds = bounds;
-			nativeView.gradientLayer.addAnimationForKey(nativeAnimation, 'bounds');
+			nativeView.gradientLayer.addAnimationForKey(nativeAnimation, key);
 		}
 
 		let clipPath; // This is also used for animating shadow
@@ -780,7 +825,7 @@ export class Animation extends AnimationBase {
 				);
 
 				nativeView.layer.mask.path = toValue;
-				nativeView.layer.mask.addAnimationForKey(nativeAnimation, 'path');
+				nativeView.layer.mask.addAnimationForKey(nativeAnimation, key);
 			}
 		}
 
@@ -803,7 +848,7 @@ export class Animation extends AnimationBase {
 						);
 
 						borderMask.path = innerClipPath;
-						borderMask.addAnimationForKey(nativeAnimation, 'path');
+						borderMask.addAnimationForKey(nativeAnimation, key);
 					}
 
 					const borderLayers = nativeView.borderLayer.sublayers;
@@ -825,7 +870,7 @@ export class Animation extends AnimationBase {
 								);
 
 								layer.path = toValue;
-								layer.addAnimationForKey(nativeAnimation, 'path');
+								layer.addAnimationForKey(nativeAnimation, key);
 							}
 						}
 					}
@@ -841,7 +886,7 @@ export class Animation extends AnimationBase {
 					);
 
 					nativeView.borderLayer.path = innerClipPath;
-					nativeView.borderLayer.addAnimationForKey(nativeAnimation, 'path');
+					nativeView.borderLayer.addAnimationForKey(nativeAnimation, key);
 				}
 			}
 		} else {
@@ -869,7 +914,7 @@ export class Animation extends AnimationBase {
 			const shadowClipMask = nativeView.outerShadowContainerLayer.mask;
 
 			nativeView.outerShadowContainerLayer.bounds = bounds;
-			nativeView.outerShadowContainerLayer.addAnimationForKey(this._createCABasicAnimation(args, animationInfo), 'bounds');
+			nativeView.outerShadowContainerLayer.addAnimationForKey(this._createCABasicAnimation(args, animationInfo), key);
 
 			// This is for animating view clip path on shadow
 			if (clipPath && shadowClipMask instanceof CAShapeLayer) {
@@ -884,7 +929,7 @@ export class Animation extends AnimationBase {
 				);
 
 				shadowClipMask.path = clipPath;
-				shadowClipMask.addAnimationForKey(nativeAnimation, 'path');
+				shadowClipMask.addAnimationForKey(nativeAnimation, key);
 			}
 
 			const outerShadowLayers = nativeView.outerShadowContainerLayer.sublayers;
@@ -904,7 +949,7 @@ export class Animation extends AnimationBase {
 					);
 
 					shadowLayer.shadowPath = shadowPath;
-					shadowLayer.addAnimationForKey(nativeAnimation, 'shadowPath');
+					shadowLayer.addAnimationForKey(nativeAnimation, key);
 
 					if (shadowLayer.mask instanceof CAShapeLayer) {
 						const nativeMaskAnimation = this._createCABasicAnimation(
@@ -918,7 +963,7 @@ export class Animation extends AnimationBase {
 						);
 
 						shadowLayer.mask.path = maskPath;
-						shadowLayer.mask.addAnimationForKey(nativeMaskAnimation, 'path');
+						shadowLayer.mask.addAnimationForKey(nativeMaskAnimation, key);
 					}
 				}
 			}
