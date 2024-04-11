@@ -6,6 +6,7 @@ import * as fsModule from '../../file-system';
 import * as types from '../../utils/types';
 import * as domainDebugger from '../../debugger';
 import { getFilenameFromUrl } from './http-request-common';
+import { SDK_VERSION } from '../../utils/constants';
 
 export enum HttpResponseEncoding {
 	UTF8,
@@ -79,8 +80,9 @@ export function request(options: httpModule.HttpRequestOptions): Promise<httpMod
 		try {
 			const network = domainDebugger.getNetwork();
 			const debugRequest = network && network.create();
-
-			const urlRequest = NSMutableURLRequest.requestWithURL(NSURL.URLWithString(options.url));
+			// Avoid duplicate url encoding on iOS 17 and later
+			const url: string = SDK_VERSION >= 17 ? NSString.stringWithString(options.url).stringByRemovingPercentEncoding : options.url;
+			const urlRequest = NSMutableURLRequest.requestWithURL(NSURL.URLWithString(url));
 
 			urlRequest.HTTPMethod = types.isDefined(options.method) ? options.method : GET;
 

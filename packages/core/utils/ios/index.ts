@@ -109,7 +109,7 @@ export function isLandscape(): boolean {
 }
 
 /**
- * @deprecated use Utils.SDK_VERSION instead which is a float of the {major}.{minor} verison
+ * @deprecated use Utils.SDK_VERSION instead which is a float of the {major}.{minor} version
  */
 export const MajorVersion = NSString.stringWithString(UIDevice.currentDevice.systemVersion).intValue;
 
