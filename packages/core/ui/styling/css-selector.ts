@@ -2,7 +2,7 @@ import { parse as convertToCSSWhatSelector, Selector as CSSWhatSelector, DataTyp
 import '../../globals';
 import { isCssVariable } from '../core/properties';
 import { Trace } from '../../trace';
-import { isNullOrUndefined } from '../../utils/types';
+import { isNullOrUndefined, isUndefined } from '../../utils/types';
 
 import * as ReworkCSS from '../../css';
 import { CSSUtils } from '../../css/system-classes';
@@ -524,6 +524,7 @@ export class ComplexSelector extends SelectorCore {
 
 		for (let i = selectors.length - 1; i >= 0; i--) {
 			const sel = selectors[i];
+			const isCombinatorSet = !isUndefined(sel.combinator);
 
 			switch (sel.combinator) {
 				case undefined:
