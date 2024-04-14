@@ -144,12 +144,13 @@ function getNodePreviousDirectSibling(node: Node): null | Node {
 	return node.parent.getChildAt(nodeIndex - 1);
 }
 
-function SelectorProperties(specificity: Specificity, rarity: Rarity, dynamic = false): ClassDecorator {
+function SelectorProperties(specificity: Specificity, rarity: Rarity, dynamic = false, pseudoSelectorListType?: PseudoClassSelectorList): ClassDecorator {
 	return (cls) => {
 		cls.prototype.specificity = specificity;
 		cls.prototype.rarity = rarity;
 		cls.prototype.combinator = undefined;
 		cls.prototype.dynamic = dynamic;
+		cls.prototype.pseudoSelectorListType = pseudoSelectorListType;
 
 		return cls;
 	};
@@ -184,7 +185,6 @@ export abstract class SelectorCore extends SelectorBase {
 	public rarity: Rarity;
 	public combinator: Combinator;
 	public ruleset: RuleSet;
-
 	/**
 	 * If the selector is static returns if it matches the node.
 	 * If the selector is dynamic returns if it may match the node, and accumulates any changes that may affect its state.
