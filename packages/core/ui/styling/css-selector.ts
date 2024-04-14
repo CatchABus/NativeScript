@@ -144,13 +144,12 @@ function getNodePreviousDirectSibling(node: Node): null | Node {
 	return node.parent.getChildAt(nodeIndex - 1);
 }
 
-function SelectorProperties(specificity: Specificity, rarity: Rarity, dynamic = false, pseudoSelectorListType?: PseudoClassSelectorList): ClassDecorator {
+function SelectorProperties(specificity: Specificity, rarity: Rarity, dynamic = false): ClassDecorator {
 	return (cls) => {
 		cls.prototype.specificity = specificity;
 		cls.prototype.rarity = rarity;
 		cls.prototype.combinator = undefined;
 		cls.prototype.dynamic = dynamic;
-		cls.prototype.pseudoSelectorListType = pseudoSelectorListType;
 
 		return cls;
 	};
