@@ -189,7 +189,6 @@ export abstract class SelectorCore extends SelectorBase {
 	 * If the selector is dynamic returns if it may match the node, and accumulates any changes that may affect its state.
 	 */
 	public abstract accumulateChanges(node: Node, map: ChangeAccumulator): boolean;
-	public abstract trackChanges(node: Node, map: ChangeAccumulator): void;
 	public lookupSort(sorter: LookupSorter, base?: SelectorCore): void {
 		sorter.sortAsUniversal(base || this);
 	}
