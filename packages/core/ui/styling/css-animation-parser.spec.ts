@@ -1,7 +1,14 @@
+import postcss from 'postcss';
 import { CoreTypes } from '../../core-types';
 import type { KeyframeAnimationInfo, KeyframeInfo } from '../animation';
 import { CssAnimationParser, keyframeAnimationsFromCSSProperty } from './css-animation-parser';
-import { cssTreeParse } from '../../css/css-tree-parser';
+
+function css2AST(css: string, opts?: Pick<postcss.ProcessOptions<postcss.Document | postcss.Root>, 'map' | 'from'>) {
+	const ast = postcss.parse(css);
+	ast.cleanRaws();
+
+	return ast;
+}
 
 describe('css-animation-parser', () => {
 	describe('shorthand-property-parser', () => {
@@ -237,15 +244,17 @@ describe('css-animation-parser', () => {
 	describe('keyframe-parser', () => {
 		// helper function
 		function testKeyframesArrayFromCSS(css: string, expectedName?: string): KeyframeInfo[] {
-			const ast = cssTreeParse(css, 'test.css');
-			const rules = ast.stylesheet.rules;
-			const firstRule = rules[0];
+			const ast = css2AST(css, {
+				from: 'test.css',
+			});
+			const rules = ast.nodes;
+			const firstRule = <postcss.AtRule>rules[0];
 
 			expect(rules.length).toBe(1);
-			expect(firstRule.type).toBe('keyframes');
+			expect(firstRule.type).toBe('atrule');
 
-			const name = firstRule.name;
-			const keyframes = firstRule.keyframes;
+			const name = firstRule.params;
+			const keyframes = <postcss.Rule[]>firstRule.nodes;
 
 			if (expectedName) {
 				expect(name).toBe(expectedName);
@@ -259,7 +268,7 @@ describe('css-animation-parser', () => {
 				`@keyframes fade {
 					from { opacity: 0; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(1);
@@ -276,7 +285,7 @@ describe('css-animation-parser', () => {
 				`@keyframes fade {
 					to { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(1);
@@ -294,7 +303,7 @@ describe('css-animation-parser', () => {
 					from { opacity: 0; }
 					to { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(2);
@@ -316,7 +325,7 @@ describe('css-animation-parser', () => {
 				`@keyframes fade {
 					0% { opacity: 0; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(1);
@@ -333,7 +342,7 @@ describe('css-animation-parser', () => {
 				`@keyframes fade {
 					100% { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(1);
@@ -351,7 +360,7 @@ describe('css-animation-parser', () => {
 					0% { opacity: 0; }
 					100% { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(2);
@@ -373,7 +382,7 @@ describe('css-animation-parser', () => {
 				`@keyframes fade {
 					50% { opacity: 0.5; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(1);
@@ -392,7 +401,7 @@ describe('css-animation-parser', () => {
 					50% { opacity: 0.5; }
 					100% { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(3);
@@ -421,7 +430,7 @@ describe('css-animation-parser', () => {
 					50% { opacity: 0.5; }
 					to { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(3);
@@ -451,7 +460,7 @@ describe('css-animation-parser', () => {
 					50% { translateX: 100; }
 					100% { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(3);
@@ -481,7 +490,7 @@ describe('css-animation-parser', () => {
 					from { opacity: 0; animation-timing-function: ease-in; }
 					to { opacity: 1; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(2);
@@ -498,7 +507,7 @@ describe('css-animation-parser', () => {
 					0% { opacity: 0; }
 					50% { opacity: 0.5; }
 				}`,
-				'fade'
+				'fade',
 			);
 
 			expect(res.length).toBe(3);

@@ -56,9 +56,9 @@
   "dependencies": {
     "@nativescript/hook": "~2.0.0",
     "acorn": "^8.7.0",
-    "css-tree": "^1.1.2",
     "emoji-regex": "^10.2.1",
     "reduce-css-calc": "^2.1.7",
+    "style-to-object": "^1.0.6",
     "tslib": "^2.0.0"
   },
   "nativescript": {
@@ -74,5 +74,8 @@
         "inject": true
       }
     ]
+  },
+  "devDependencies": {
+    "postcss": "^8.4.38"
   }
 }

@@ -1,4 +1,4 @@
-import { parse } from '../../css/reworkcss';
+import postcss from 'postcss';
 import { createSelector, RuleSet, SelectorsMap, fromAstNodes, Node, Changes } from './css-selector';
 
 describe('css-selector', () => {
@@ -8,18 +8,25 @@ describe('css-selector', () => {
 			sel.match(<any>{
 				cssType: 'button',
 				testAttr: true,
-			})
+			}),
 		).toBeTruthy();
 		expect(
 			sel.match(<any>{
 				cssType: 'button',
-			})
+			}),
 		).toBeFalsy();
 	});
 
 	function create(css: string, source = 'css-selectors.ts@test'): { rules: RuleSet[]; map: SelectorsMap<any> } {
-		const parsed = parse(css, { source });
-		const rulesAst = parsed.stylesheet.rules.filter((n) => n.type === 'rule');
+		const ast = postcss.parse(css, {
+			from: source,
+		});
+		ast.cleanRaws();
+
+		// Call toJSON to get rid of circular structure
+		const parsed = <postcss.Root>ast.toJSON();
+
+		const rulesAst = parsed.nodes.filter((n) => n.type === 'rule');
 		const rules = fromAstNodes(rulesAst);
 		const map = new SelectorsMap(rules);
 
@@ -128,7 +135,7 @@ describe('css-selector', () => {
 				parent: {
 					cssType: 'listview',
 				},
-			})
+			}),
 		).toBe(true);
 		expect(
 			rule.selectors[0].match({
@@ -140,7 +147,7 @@ describe('css-selector', () => {
 						cssType: 'listview',
 					},
 				},
-			})
+			}),
 		).toBe(false);
 	});
 
@@ -153,7 +160,7 @@ describe('css-selector', () => {
 				parent: {
 					cssType: 'listview',
 				},
-			})
+			}),
 		).toBe(true);
 		expect(
 			rule.selectors[0].match({
@@ -165,7 +172,7 @@ describe('css-selector', () => {
 						cssType: 'listview',
 					},
 				},
-			})
+			}),
 		).toBe(true);
 		expect(
 			rule.selectors[0].match({
@@ -177,7 +184,7 @@ describe('css-selector', () => {
 						cssType: 'page',
 					},
 				},
-			})
+			}),
 		).toBe(false);
 	});
 

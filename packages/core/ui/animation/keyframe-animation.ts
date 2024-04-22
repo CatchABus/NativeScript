@@ -9,16 +9,7 @@ import { Trace } from '../../trace';
 import { unsetValue } from '../core/properties';
 import { Animation } from '.';
 import { backgroundColorProperty, scaleXProperty, scaleYProperty, translateXProperty, translateYProperty, rotateProperty, opacityProperty, rotateXProperty, rotateYProperty, widthProperty, heightProperty } from '../styling/style-properties';
-
-export class Keyframes {
-	name: string;
-	keyframes: Array<UnparsedKeyframe>;
-}
-
-export class UnparsedKeyframe {
-	values: Array<any>;
-	declarations: Array<KeyframeDeclaration>;
-}
+import type { Declaration } from 'postcss';
 
 export class KeyframeDeclaration {
 	public property: string;
@@ -244,7 +235,7 @@ export class KeyframeAnimation {
 					},
 					(error: any) => {
 						Trace.write(typeof error === 'string' ? error : error.message, Trace.categories.Animation, Trace.messageType.warn);
-					}
+					},
 				)
 				.catch((error: any) => {
 					Trace.write(typeof error === 'string' ? error : error.message, Trace.categories.Animation, Trace.messageType.warn);

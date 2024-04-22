@@ -18,19 +18,9 @@ interface Keyframe {
 	forceLayer?: boolean;
 }
 
-export interface Keyframes {
-	name: string;
-	keyframes: Array<UnparsedKeyframe>;
-}
-
-export interface UnparsedKeyframe {
-	values: Array<any>;
-	declarations: Array<KeyframeDeclaration>;
-}
-
-export interface KeyframeDeclaration {
-	property: string;
-	value: any;
+export class KeyframeDeclaration {
+	public property: string;
+	public value: any;
 }
 
 export interface KeyframeInfo {

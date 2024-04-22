@@ -1,10 +1,12 @@
 import { CssAnimationProperty } from '../core/properties';
 
-import { KeyframeAnimationInfo, KeyframeDeclaration, KeyframeInfo, UnparsedKeyframe } from '../animation/keyframe-animation';
+import { KeyframeDeclaration, KeyframeAnimationInfo, KeyframeInfo } from '../animation/keyframe-animation';
 import { timeConverter, animationTimingFunctionConverter } from '../styling/converters';
 
 import { transformConverter } from '../styling/style-properties';
 import { cleanupImportantFlags } from './css-utils';
+import { ParsedDeclaration } from './css-selector';
+import type * as PostCSS from 'postcss';
 
 const ANIMATION_PROPERTY_HANDLERS = Object.freeze({
 	'animation-name': (info: any, value: any) => (info.name = value.replace(/['"]/g, '')),
@@ -17,7 +19,7 @@ const ANIMATION_PROPERTY_HANDLERS = Object.freeze({
 });
 
 export class CssAnimationParser {
-	public static keyframeAnimationsFromCSSDeclarations(declarations: KeyframeDeclaration[]): KeyframeAnimationInfo[] {
+	public static keyframeAnimationsFromCSSDeclarations(declarations: ParsedDeclaration[]): KeyframeAnimationInfo[] {
 		if (declarations === null || declarations === undefined) {
 			return undefined;
 		}
@@ -43,24 +45,30 @@ export class CssAnimationParser {
 		return animations.length === 0 ? undefined : animations;
 	}
 
-	public static keyframesArrayFromCSS(keyframes: UnparsedKeyframe[]): KeyframeInfo[] {
+	public static keyframesArrayFromCSS(keyframes: PostCSS.Rule[]): KeyframeInfo[] {
 		const parsedKeyframes = new Array<KeyframeInfo>();
 		for (const keyframe of keyframes) {
-			const declarations = parseKeyframeDeclarations(keyframe.declarations);
-			for (let time of keyframe.values) {
-				if (time === 'from') {
+			const declarations = parseKeyframeDeclarations(<PostCSS.Declaration[]>keyframe.nodes);
+			const values = keyframe.selector.split(',');
+
+			for (let value of values) {
+				value = value.trim();
+
+				let time: number;
+
+				if (value === 'from') {
 					time = 0;
-				} else if (time === 'to') {
+				} else if (value === 'to') {
 					time = 1;
 				} else {
-					time = parseFloat(time) / 100;
+					time = parseFloat(value) / 100;
 					if (time < 0) {
 						time = 0;
-					}
-					if (time > 100) {
+					} else if (time > 100) {
 						time = 100;
 					}
 				}
+
 				let current = parsedKeyframes[time];
 				if (current === undefined) {
 					current = <KeyframeInfo>{};
@@ -68,11 +76,13 @@ export class CssAnimationParser {
 					current.declarations = [];
 					parsedKeyframes[time] = current;
 				}
-				for (const declaration of keyframe.declarations) {
-					if (declaration.property === 'animation-timing-function') {
-						current.curve = animationTimingFunctionConverter(declaration.value);
+
+				for (const node of keyframe.nodes) {
+					if (node.type === 'decl' && node.prop === 'animation-timing-function') {
+						current.curve = animationTimingFunctionConverter(node.value);
 					}
 				}
+
 				current.declarations = current.declarations.concat(declarations);
 			}
 		}
@@ -182,8 +192,8 @@ export function keyframeAnimationsFromCSSProperty(value: any, animations: Keyfra
 	}
 }
 
-export function parseKeyframeDeclarations(unparsedKeyframeDeclarations: KeyframeDeclaration[]): KeyframeDeclaration[] {
-	const declarations = unparsedKeyframeDeclarations.reduce((declarations, { property: unparsedProperty, value: unparsedValue }) => {
+export function parseKeyframeDeclarations(unparsedKeyframeDeclarations: PostCSS.Declaration[]): KeyframeDeclaration[] {
+	const declarations = unparsedKeyframeDeclarations.reduce((declarations, { prop: unparsedProperty, value: unparsedValue }) => {
 		const property = CssAnimationProperty._getByCssName(unparsedProperty);
 		unparsedValue = cleanupImportantFlags(unparsedValue, property?.cssLocalName);
 

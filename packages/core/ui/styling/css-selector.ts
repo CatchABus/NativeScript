@@ -2,7 +2,7 @@ import '../../globals';
 import { isCssVariable } from '../core/properties';
 import { isNullOrUndefined } from '../../utils/types';
 
-import * as ReworkCSS from '../../css';
+import type * as PostCSS from 'postcss';
 import { Combinator as ICombinator, SimpleSelectorSequence as ISimpleSelectorSequence, Selector as ISelector, SimpleSelector as ISimpleSelector, parseSelector } from '../../css/parser';
 
 /**
@@ -22,7 +22,7 @@ export interface Node {
 	getChildAt?(index: number): Node;
 }
 
-export interface Declaration {
+export interface ParsedDeclaration {
 	property: string;
 	value: string;
 }
@@ -224,7 +224,11 @@ export class ClassSelector extends SimpleSelector {
 declare type AttributeTest = '=' | '^=' | '$=' | '*=' | '=' | '~=' | '|=';
 @SelectorProperties(Specificity.Attribute, Rarity.Attribute, Match.Dynamic)
 export class AttributeSelector extends SimpleSelector {
-	constructor(public attribute: string, public test?: AttributeTest, public value?: string) {
+	constructor(
+		public attribute: string,
+		public test?: AttributeTest,
+		public value?: string,
+	) {
 		super();
 
 		if (!test) {
@@ -504,7 +508,10 @@ export namespace Selector {
 export class RuleSet {
 	tag: string | number;
 	scopedTag: string;
-	constructor(public selectors: SelectorCore[], public declarations: Declaration[]) {
+	constructor(
+		public selectors: SelectorCore[],
+		public declarations: ParsedDeclaration[],
+	) {
 		this.selectors.forEach((sel) => (sel.ruleset = this));
 	}
 	public toString(): string {
@@ -515,17 +522,17 @@ export class RuleSet {
 	}
 }
 
-export function fromAstNodes(astRules: ReworkCSS.Node[]): RuleSet[] {
-	return (<ReworkCSS.Rule[]>astRules.filter(isRule)).map((rule) => {
-		const declarations = rule.declarations.filter(isDeclaration).map(createDeclaration);
-		const selectors = rule.selectors.map(createSelector);
+export function fromAstNodes(astRules: PostCSS.ChildNode[]): RuleSet[] {
+	return astRules.filter(isRule).map((rule) => {
+		const declarations = rule.nodes.filter(isDeclaration).map(createDeclaration);
+		const selectors = rule.selector.split(',').map((selector) => createSelector(selector.trim()));
 
 		return new RuleSet(selectors, declarations);
 	});
 }
 
-function createDeclaration(decl: ReworkCSS.Declaration): any {
-	return { property: isCssVariable(decl.property) ? decl.property : decl.property.toLowerCase(), value: decl.value };
+function createDeclaration(decl: PostCSS.Declaration): ParsedDeclaration {
+	return { property: isCssVariable(decl.prop) ? decl.prop : decl.prop.toLowerCase(), value: decl.value };
 }
 
 function createSimpleSelectorFromAst(ast: ISimpleSelector): SimpleSelector {
@@ -599,11 +606,11 @@ export function createSelector(sel: string): SimpleSelector | SimpleSelectorSequ
 	}
 }
 
-function isRule(node: ReworkCSS.Node): node is ReworkCSS.Rule {
+function isRule(node: PostCSS.ChildNode): node is PostCSS.Rule {
 	return node.type === 'rule';
 }
-function isDeclaration(node: ReworkCSS.Node): node is ReworkCSS.Declaration {
-	return node.type === 'declaration';
+function isDeclaration(node: PostCSS.ChildNode): node is PostCSS.Declaration {
+	return node.type === 'decl';
 }
 
 interface SelectorMap {
