@@ -21,7 +21,6 @@ import * as capm from './css-animation-parser';
 import { sanitizeModuleName } from '../../utils/common';
 import { resolveModuleName } from '../../module-name-resolver';
 import { cleanupImportantFlags } from './css-utils';
-import { validateMediaQuery } from '../../media-query';
 
 let cssAnimationParserModule: typeof capm;
 function ensureCssAnimationParserModule() {
