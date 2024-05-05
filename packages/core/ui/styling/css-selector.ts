@@ -5,7 +5,7 @@ import { Trace } from '../../trace';
 import { isNullOrUndefined } from '../../utils/types';
 
 import * as ReworkCSS from '../../css';
-import { validateMediaQuery } from '../../media-query-list';
+import { checkIfMediaQueryMatches } from '../../media-query-list';
 
 export const MEDIA_QUERY_SEPARATOR = '&&';
 
@@ -961,7 +961,7 @@ export function matchMediaQueryString(mediaQueryString: string, cachedQueries: s
 		if (cachedQueries.includes(mq)) {
 			isMatching = true;
 		} else {
-			isMatching = validateMediaQuery(mq);
+			isMatching = checkIfMediaQueryMatches(mq);
 			if (isMatching) {
 				cachedQueries.push(mq);
 			}
