@@ -3,8 +3,8 @@ import '../../globals';
 import { isCssVariable } from '../core/properties';
 import { Trace } from '../../trace';
 import { isNullOrUndefined } from '../../utils/types';
-
 import * as ReworkCSS from '../../css';
+import { CSSUtils } from '../../css/system-classes';
 import { checkIfMediaQueryMatches } from '../../media-query-list';
 
 export const MEDIA_QUERY_SEPARATOR = '&&';
@@ -1124,6 +1124,9 @@ export class SelectorsMatch<T extends Node> implements ChangeAccumulator {
 	public selectors: SelectorCore[];
 
 	public addAttribute(node: T, attribute: string): void {
+		if (CSSUtils.IgnoredCssDynamicAttributeTracking.has(attribute)) {
+			return;
+		}
 		const deps: Changes = this.properties(node);
 		if (!deps.attributes) {
 			deps.attributes = new Set();

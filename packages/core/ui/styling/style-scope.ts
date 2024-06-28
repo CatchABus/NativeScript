@@ -21,6 +21,7 @@ import * as capm from './css-animation-parser';
 import { sanitizeModuleName } from '../../utils/common';
 import { resolveModuleName } from '../../module-name-resolver';
 import { cleanupImportantFlags } from './css-utils';
+import { Observable, PropertyChangeData } from '../../data/observable';
 
 let cssAnimationParserModule: typeof capm;
 function ensureCssAnimationParserModule() {
@@ -549,6 +550,8 @@ export class CssState {
 	_matchInvalid: boolean;
 	_playsKeyframeAnimations: boolean;
 
+	private _dynamicUpdateListenerMap: Map<ViewBase, (t: any) => void> = new Map();
+
 	constructor(private viewRef: WeakRef<ViewBase>) {
 		this._onDynamicStateChangeHandler = () => this.updateDynamicState();
 	}
@@ -783,9 +786,14 @@ export class CssState {
 		const changeMap = this._match.changeMap;
 		changeMap.forEach((changes, view) => {
 			if (changes.attributes) {
-				changes.attributes.forEach((attribute) => {
-					view.addEventListener(attribute + 'Change', this._onDynamicStateChangeHandler);
-				});
+				const attributes = changes.attributes;
+				const listener = (args: PropertyChangeData) => {
+					if (attributes.has(args.propertyName)) {
+						this._onDynamicStateChangeHandler();
+					}
+				};
+				this._dynamicUpdateListenerMap.set(view, listener);
+				view.addEventListener(Observable.propertyChangeEvent, listener);
 			}
 			if (changes.pseudoClasses) {
 				changes.pseudoClasses.forEach((pseudoClass) => {
@@ -802,10 +810,8 @@ export class CssState {
 
 	private unsubscribeFromDynamicUpdates(): void {
 		this._appliedChangeMap.forEach((changes, view) => {
-			if (changes.attributes) {
-				changes.attributes.forEach((attribute) => {
-					view.removeEventListener(attribute + 'Change', this._onDynamicStateChangeHandler);
-				});
+			if (this._dynamicUpdateListenerMap.has(view)) {
+				view.removeEventListener(Observable.propertyChangeEvent, this._dynamicUpdateListenerMap.get(view));
 			}
 			if (changes.pseudoClasses) {
 				changes.pseudoClasses.forEach((pseudoClass) => {
@@ -817,6 +823,7 @@ export class CssState {
 				});
 			}
 		});
+		this._dynamicUpdateListenerMap.clear();
 		this._appliedChangeMap = CssState.emptyChangeMap;
 	}
 
