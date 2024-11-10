@@ -21,11 +21,11 @@ export class DockLayout extends DockLayoutBase {
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		const horizontalPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
-		const verticalPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
+		const hPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
+		const vPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
 
-		let remainingWidth = widthMode === layout.UNSPECIFIED ? Number.MAX_VALUE : width - horizontalPaddingsAndMargins;
-		let remainingHeight = heightMode === layout.UNSPECIFIED ? Number.MAX_VALUE : height - verticalPaddingsAndMargins;
+		let remainingWidth = widthMode === layout.UNSPECIFIED ? Number.MAX_VALUE : width - hPaddingsAndMargins;
+		let remainingHeight = heightMode === layout.UNSPECIFIED ? Number.MAX_VALUE : height - vPaddingsAndMargins;
 
 		let tempHeight = 0;
 		let tempWidth = 0;
@@ -52,7 +52,6 @@ export class DockLayout extends DockLayoutBase {
 					measureWidth = Math.max(measureWidth, tempWidth + childSize.measuredWidth);
 					measureHeight = Math.max(measureHeight, tempHeight);
 					break;
-
 				case 'left':
 				case 'right':
 				default:
@@ -64,11 +63,8 @@ export class DockLayout extends DockLayoutBase {
 			}
 		});
 
-		measureWidth += horizontalPaddingsAndMargins;
-		measureHeight += verticalPaddingsAndMargins;
-
-		measureWidth = Math.max(measureWidth, this.effectiveMinWidth);
-		measureHeight = Math.max(measureHeight, this.effectiveMinHeight);
+		measureWidth = this._calculatePreferredWidth(measureWidth + hPaddingsAndMargins);
+		measureHeight = this._calculatePreferredHeight(measureHeight + vPaddingsAndMargins);
 
 		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

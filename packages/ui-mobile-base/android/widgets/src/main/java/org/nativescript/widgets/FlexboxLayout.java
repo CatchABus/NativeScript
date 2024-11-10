@@ -994,10 +994,24 @@ public class FlexboxLayout extends LayoutBase {
 					} else {
 						accumulatedRoundError = (rawCalculatedWidth - roundedCalculatedWidth);
 					}
-					child.measure(MeasureSpec.makeMeasureSpec(roundedCalculatedWidth, MeasureSpec.EXACTLY),
-						MeasureSpec
-							.makeMeasureSpec(child.getMeasuredHeight(),
-								MeasureSpec.EXACTLY));
+
+					int childWidthMeasureSpec = MeasureSpec.makeMeasureSpec(roundedCalculatedWidth, MeasureSpec.EXACTLY);
+
+					// NOTE: for controls that support internal content wrapping (e.g. TextView) reducing the width
+					// might result in increased height e.g. text that could be shown on one line for larger
+					// width needs to be wrapped in two when width is reduced.
+					// As a result we cannot unconditionally measure with EXACTLY the current measured height
+					int childHeightMeasureSpec = getChildMeasureSpec(this.getMeasuredHeightAndState(),
+						getPaddingTop() + getPaddingBottom() + lp.topMargin
+							+ lp.bottomMargin, lp.height < 0 ? LayoutParams.WRAP_CONTENT : lp.height);
+
+					child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
+
+					// make sure crossSize is up-to-date as child calculated height might have decreased
+					flexLine.mCrossSize = Math.min(
+						flexLine.mCrossSize,
+						child.getMeasuredHeight() + lp.topMargin + lp.bottomMargin
+					);
 				}
 				flexLine.mMainSize += child.getMeasuredWidth() + lp.leftMargin + lp.rightMargin;
 			} else {
@@ -2591,8 +2605,6 @@ public class FlexboxLayout extends LayoutBase {
 
 		public static final int ALIGN_SELF_STRETCH = ALIGN_ITEMS_STRETCH;
 
-		private static final int MAX_SIZE = Integer.MAX_VALUE & View.MEASURED_SIZE_MASK;
-
 		/**
 		 * This attribute can change the ordering of the children views are laid out.
 		 * By default, children are displayed and laid out in the same order as they appear in the
@@ -2647,16 +2659,6 @@ public class FlexboxLayout extends LayoutBase {
 		 * This attribute determines the minimum height the child can shrink to.
 		 */
 		public int minHeight;
-
-		/**
-		 * This attribute determines the maximum width the child can expand to.
-		 */
-		public int maxWidth = MAX_SIZE;
-
-		/**
-		 * This attribute determines the maximum height the child can expand to.
-		 */
-		public int maxHeight = MAX_SIZE;
 
 		/**
 		 * This attribute forces a flex line wrapping. i.e. if this is set to {@code true} for a

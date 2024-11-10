@@ -35,11 +35,11 @@ export class AbsoluteLayout extends AbsoluteLayoutBase {
 			measureHeight = Math.max(measureHeight, child.effectiveTop + childSize.measuredHeight);
 		});
 
-		measureWidth += this.effectiveBorderLeftWidth + this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderRightWidth;
-		measureHeight += this.effectiveBorderTopWidth + this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderBottomWidth;
+		const hPaddingsAndMargins = this.effectiveBorderLeftWidth + this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderRightWidth;
+		const vPaddingsAndMargins = this.effectiveBorderTopWidth + this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderBottomWidth;
 
-		measureWidth = Math.max(measureWidth, this.effectiveMinWidth);
-		measureHeight = Math.max(measureHeight, this.effectiveMinHeight);
+		measureWidth = this._calculatePreferredWidth(measureWidth + hPaddingsAndMargins);
+		measureHeight = this._calculatePreferredHeight(measureHeight + vPaddingsAndMargins);
 
 		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

@@ -20,6 +20,7 @@ import { profile } from '../../../profiling';
 import * as dnm from '../../../debugger/dom-node';
 import * as ssm from '../../styling/style-scope';
 import { ViewBase as ViewBaseDefinition } from '.';
+import { layout } from '../../../utils';
 
 let domNodeModule: typeof dnm;
 
@@ -434,10 +435,12 @@ export abstract class ViewBase extends Observable implements ViewBaseDefinition 
 	_oldTop: number;
 	_oldRight: number;
 	_oldBottom: number;
-	_ignoreFlexMinWidthHeightReset: boolean;
+	_ignoreFlexSizeConstraintsReset: boolean;
 
 	public effectiveMinWidth: number;
 	public effectiveMinHeight: number;
+	public effectiveMaxWidth: number;
+	public effectiveMaxHeight: number;
 	public effectiveWidth: number;
 	public effectiveHeight: number;
 	public effectiveMarginTop: number;
@@ -1417,6 +1420,8 @@ ViewBase.prototype._oldBottom = 0;
 
 ViewBase.prototype.effectiveMinWidth = 0;
 ViewBase.prototype.effectiveMinHeight = 0;
+ViewBase.prototype.effectiveMaxWidth = layout.MAX_MEASURED_SIZE;
+ViewBase.prototype.effectiveMaxHeight = layout.MAX_MEASURED_SIZE;
 ViewBase.prototype.effectiveWidth = 0;
 ViewBase.prototype.effectiveHeight = 0;
 ViewBase.prototype.effectiveMarginTop = 0;

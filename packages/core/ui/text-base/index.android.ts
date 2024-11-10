@@ -443,10 +443,10 @@ export class TextBase extends TextBaseCommon {
 	}
 
 	[letterSpacingProperty.getDefault](): number {
-		return org.nativescript.widgets.ViewHelper.getLetterspacing(this.nativeTextViewProtected);
+		return org.nativescript.widgets.ViewHelper.getLetterSpacing(this.nativeTextViewProtected);
 	}
 	[letterSpacingProperty.setNative](value: number) {
-		org.nativescript.widgets.ViewHelper.setLetterspacing(this.nativeTextViewProtected, value);
+		org.nativescript.widgets.ViewHelper.setLetterSpacing(this.nativeTextViewProtected, value);
 	}
 
 	[paddingTopProperty.getDefault](): CoreTypes.LengthType {

@@ -97,32 +97,29 @@ export class Image extends ImageBase {
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		const nativeWidth = this.imageSource ? layout.toDevicePixels(this.imageSource.width) : 0;
-		const nativeHeight = this.imageSource ? layout.toDevicePixels(this.imageSource.height) : 0;
-
-		let measureWidth = Math.max(nativeWidth, this.effectiveMinWidth);
-		let measureHeight = Math.max(nativeHeight, this.effectiveMinHeight);
-
 		const finiteWidth: boolean = widthMode !== layout.UNSPECIFIED;
 		const finiteHeight: boolean = heightMode !== layout.UNSPECIFIED;
 
+		let measureWidth = this.imageSource ? layout.toDevicePixels(this.imageSource.width) : 0;
+		let measureHeight = this.imageSource ? layout.toDevicePixels(this.imageSource.height) : 0;
+
 		this._imageSourceAffectsLayout = widthMode !== layout.EXACTLY || heightMode !== layout.EXACTLY;
 
-		if (nativeWidth !== 0 && nativeHeight !== 0 && (finiteWidth || finiteHeight)) {
-			const scale = Image.computeScaleFactor(width, height, finiteWidth, finiteHeight, nativeWidth, nativeHeight, this.stretch);
-			const resultW = Math.round(nativeWidth * scale.width);
-			const resultH = Math.round(nativeHeight * scale.height);
+		if (measureWidth !== 0 && measureHeight !== 0 && (finiteWidth || finiteHeight)) {
+			const scale = Image.computeScaleFactor(width, height, finiteWidth, finiteHeight, measureWidth, measureHeight, this.stretch);
+			const resultW = Math.round(measureWidth * scale.width);
+			const resultH = Math.round(measureHeight * scale.height);
 
 			measureWidth = finiteWidth ? Math.min(resultW, width) : resultW;
 			measureHeight = finiteHeight ? Math.min(resultH, height) : resultH;
 
 			if (Trace.isEnabled()) {
-				Trace.write('Image stretch: ' + this.stretch + ', nativeWidth: ' + nativeWidth + ', nativeHeight: ' + nativeHeight, Trace.categories.Layout);
+				Trace.write('Image stretch: ' + this.stretch + ', nativeWidth: ' + measureWidth + ', nativeHeight: ' + measureHeight, Trace.categories.Layout);
 			}
 		}
 
-		const widthAndState = Image.resolveSizeAndState(measureWidth, width, widthMode, 0);
-		const heightAndState = Image.resolveSizeAndState(measureHeight, height, heightMode, 0);
+		const widthAndState = Image.resolveSizeAndState(this._calculatePreferredWidth(measureWidth), width, widthMode, 0);
+		const heightAndState = Image.resolveSizeAndState(this._calculatePreferredHeight(measureHeight), height, heightMode, 0);
 
 		this.setMeasuredDimension(widthAndState, heightAndState);
 	}

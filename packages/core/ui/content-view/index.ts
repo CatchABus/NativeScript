@@ -88,8 +88,8 @@ export class ContentView extends CustomLayoutView implements AddChildFromBuilder
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		const measureWidth = Math.max(result.measuredWidth, this.effectiveMinWidth);
-		const measureHeight = Math.max(result.measuredHeight, this.effectiveMinHeight);
+		const measureWidth = this._calculatePreferredWidth(result.measuredWidth);
+		const measureHeight = this._calculatePreferredHeight(result.measuredHeight);
 
 		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

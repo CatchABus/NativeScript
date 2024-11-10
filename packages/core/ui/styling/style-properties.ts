@@ -18,45 +18,73 @@ import { parseBackground } from '../../css/parser';
 import { LinearGradient } from './linear-gradient';
 import { parseCSSShadow, ShadowCSSValues } from './css-shadow';
 
-function equalsCommon(a: CoreTypes.LengthType, b: CoreTypes.LengthType): boolean;
-function equalsCommon(a: CoreTypes.PercentLengthType, b: CoreTypes.PercentLengthType): boolean;
-function equalsCommon(a: CoreTypes.PercentLengthType, b: CoreTypes.PercentLengthType): boolean {
-	if (a == 'auto') {
-		// tslint:disable-line
-		return b == 'auto'; // tslint:disable-line
-	}
-	if (typeof a === 'number') {
-		if (b == 'auto') {
-			// tslint:disable-line
-			return false;
+function parseLengthTypeCommon(fromValue: string | CoreTypes.UnitLengthType): CoreTypes.UnitLengthType {
+	let lengthType: CoreTypes.UnitLengthType;
+
+	if (typeof fromValue === 'string') {
+		let stringValue = fromValue.trim();
+		let unitIndex: number;
+
+		if ((unitIndex = stringValue.indexOf('px')) !== -1) {
+			stringValue = stringValue.substring(0, unitIndex).trim();
+
+			const value: CoreTypes.px = parseFloat(stringValue);
+			if (isNaN(value) || !isFinite(value)) {
+				throw new Error(`Invalid value: ${fromValue}`);
+			}
+
+			lengthType = { unit: 'px', value };
+		} else if ((unitIndex = stringValue.indexOf('%')) !== -1) {
+			let value: CoreTypes.percent;
+			// if only % or % is not last we treat it as invalid value.
+			if (unitIndex !== stringValue.length - 1 || unitIndex === 0) {
+				value = Number.NaN;
+			} else {
+				// Normalize result to values between -1 and 1
+				value = parseFloat(stringValue.substring(0, stringValue.length - 1).trim()) / 100;
+			}
+
+			if (isNaN(value) || !isFinite(value)) {
+				throw new Error(`Invalid value: ${fromValue}`);
+			}
+
+			lengthType = { unit: '%', value };
+		} else {
+			const value: CoreTypes.dip = parseFloat(stringValue);
+			if (isNaN(value) || !isFinite(value)) {
+				throw new Error(`Invalid value: ${fromValue}`);
+			}
+
+			lengthType = value;
 		}
+	} else {
+		lengthType = fromValue;
+	}
+
+	return lengthType;
+}
+
+function equalsCommon(a: CoreTypes.UnitLengthType, b: CoreTypes.UnitLengthType): boolean {
+	if (typeof a === 'number') {
 		if (typeof b === 'number') {
-			return a == b; // tslint:disable-line
+			return a == b;
 		}
 		if (!b) {
 			return false;
 		}
-		return b.unit == 'dip' && a == b.value; // tslint:disable-line
+		return b.unit == 'dip' && a == b.value;
 	}
-	if (b == 'auto') {
-		// tslint:disable-line
-		return false;
-	}
+
 	if (typeof b === 'number') {
-		return a ? a.unit == 'dip' && a.value == b : false; // tslint:disable-line
+		return a ? a.unit == 'dip' && a.value == b : false;
 	}
 	if (!a || !b) {
 		return false;
 	}
-	return a.value == b.value && a.unit == b.unit; // tslint:disable-line
+	return a.value == b.value && a.unit == b.unit;
 }
 
-function convertToStringCommon(length: CoreTypes.LengthType | CoreTypes.PercentLengthType): string {
-	if (length == 'auto') {
-		// tslint:disable-line
-		return 'auto';
-	}
-
+function convertToStringCommon(length: CoreTypes.UnitLengthType): string {
 	if (typeof length === 'number') {
 		return length.toString();
 	}
@@ -69,17 +97,15 @@ function convertToStringCommon(length: CoreTypes.LengthType | CoreTypes.PercentL
 	return val + length.unit;
 }
 
-function toDevicePixelsCommon(length: CoreTypes.PercentLengthType, auto: number = Number.NaN, parentAvailableWidth: number = Number.NaN): number {
-	if (length == 'auto') {
-		// tslint:disable-line
-		return auto;
-	}
+function toDevicePixelsCommon(length: CoreTypes.UnitLengthType, auto: number = Number.NaN, parentAvailableWidth: number = Number.NaN): number {
 	if (typeof length === 'number') {
 		return layout.round(layout.toDevicePixels(length));
 	}
+
 	if (!length) {
 		return auto;
 	}
+
 	switch (length.unit) {
 		case 'px':
 			return layout.round(length.value);
@@ -93,95 +119,140 @@ function toDevicePixelsCommon(length: CoreTypes.PercentLengthType, auto: number 
 
 export namespace PercentLength {
 	export function parse(fromValue: string | CoreTypes.LengthType): CoreTypes.PercentLengthType {
-		if (fromValue == 'auto') {
-			// tslint:disable-line
-			return 'auto';
-		}
 		if (typeof fromValue === 'string') {
-			let stringValue = fromValue.trim();
-			const percentIndex = stringValue.indexOf('%');
-			if (percentIndex !== -1) {
-				let value: CoreTypes.percent;
-				// if only % or % is not last we treat it as invalid value.
-				if (percentIndex !== stringValue.length - 1 || percentIndex === 0) {
-					value = Number.NaN;
-				} else {
-					// Normalize result to values between -1 and 1
-					value = parseFloat(stringValue.substring(0, stringValue.length - 1).trim()) / 100;
-				}
-
-				if (isNaN(value) || !isFinite(value)) {
-					throw new Error(`Invalid value: ${fromValue}`);
-				}
-
-				return { unit: '%', value };
-			} else if (stringValue.indexOf('px') !== -1) {
-				stringValue = stringValue.replace('px', '').trim();
-				const value: CoreTypes.px = parseFloat(stringValue);
-				if (isNaN(value) || !isFinite(value)) {
-					throw new Error(`Invalid value: ${fromValue}`);
-				}
-
-				return { unit: 'px', value };
-			} else {
-				const value: CoreTypes.dip = parseFloat(stringValue);
-				if (isNaN(value) || !isFinite(value)) {
-					throw new Error(`Invalid value: ${fromValue}`);
-				}
-
-				return value;
+			if (fromValue == 'auto') {
+				return 'auto';
 			}
-		} else {
-			return fromValue;
+
+			return parseLengthTypeCommon(fromValue);
 		}
+
+		return fromValue;
 	}
 
-	export const equals: {
-		(a: CoreTypes.PercentLengthType, b: CoreTypes.PercentLengthType): boolean;
-	} = equalsCommon;
-	export const toDevicePixels: {
-		(length: CoreTypes.PercentLengthType, auto: number, parentAvailableWidth: number): number;
-	} = toDevicePixelsCommon;
-	export const convertToString: {
-		(length: CoreTypes.PercentLengthType): string;
-	} = convertToStringCommon;
+	export function equals(a: CoreTypes.PercentLengthType, b: CoreTypes.PercentLengthType): boolean {
+		if (a == 'auto') {
+			return b == 'auto';
+		}
+
+		if (b == 'auto') {
+			return false;
+		}
+
+		return equalsCommon(a, b);
+	}
+
+	export function toDevicePixels(length: CoreTypes.PercentLengthType, auto: number, parentAvailableWidth: number): number {
+		if (length == 'auto') {
+			return auto;
+		}
+
+		return toDevicePixelsCommon(length, auto, parentAvailableWidth);
+	}
+
+	export function convertToString(length: CoreTypes.PercentLengthType): string {
+		if (length == 'auto') {
+			return length;
+		}
+
+		return convertToStringCommon(length);
+	}
 }
 
 export namespace Length {
 	export function parse(fromValue: string | CoreTypes.LengthType): CoreTypes.LengthType {
-		if (fromValue == 'auto') {
-			// tslint:disable-line
-			return 'auto';
-		}
 		if (typeof fromValue === 'string') {
-			let stringValue = fromValue.trim();
-			if (stringValue.indexOf('px') !== -1) {
-				stringValue = stringValue.replace('px', '').trim();
-				const value: CoreTypes.px = parseFloat(stringValue);
-				if (isNaN(value) || !isFinite(value)) {
-					throw new Error(`Invalid value: ${stringValue}`);
-				}
-
-				return { unit: 'px', value };
-			} else {
-				const value: CoreTypes.dip = parseFloat(stringValue);
-				if (isNaN(value) || !isFinite(value)) {
-					throw new Error(`Invalid value: ${stringValue}`);
-				}
-
-				return value;
+			if (fromValue == 'auto') {
+				return 'auto';
 			}
-		} else {
-			return fromValue;
+
+			const lengthType = parseLengthTypeCommon(fromValue);
+
+			if (typeof lengthType !== 'number' && lengthType.unit === '%') {
+				Trace.write(`Unsupported property percentage value "${fromValue}". Value will be treated as dip`, Trace.categories.Style, Trace.messageType.warn);
+				return lengthType.value;
+			}
+			return lengthType;
 		}
+
+		return fromValue;
 	}
-	export const equals: { (a: CoreTypes.LengthType, b: CoreTypes.LengthType): boolean } = equalsCommon;
-	export const toDevicePixels: {
-		(length: CoreTypes.LengthType, auto?: number): number;
-	} = toDevicePixelsCommon;
-	export const convertToString: {
-		(length: CoreTypes.LengthType): string;
-	} = convertToStringCommon;
+
+	export function equals(a: CoreTypes.LengthType, b: CoreTypes.LengthType): boolean {
+		if (a == 'auto') {
+			return b == 'auto';
+		}
+
+		if (b == 'auto') {
+			return false;
+		}
+
+		return equalsCommon(a, b);
+	}
+
+	export function toDevicePixels(length: CoreTypes.LengthType, auto?: number): number {
+		if (length == 'auto') {
+			return auto;
+		}
+
+		return toDevicePixelsCommon(length, auto);
+	}
+
+	export function convertToString(length: CoreTypes.LengthType): string {
+		if (length == 'auto') {
+			return length;
+		}
+
+		return convertToStringCommon(length);
+	}
+}
+
+export namespace MaxLength {
+	export function parse(fromValue: string | CoreTypes.MaxLengthType): CoreTypes.MaxLengthType {
+		if (typeof fromValue === 'string') {
+			if (fromValue == 'none') {
+				return 'none';
+			}
+
+			const lengthType = parseLengthTypeCommon(fromValue);
+
+			if (typeof lengthType !== 'number' && lengthType.unit === '%') {
+				Trace.write(`Unsupported property percentage value "${fromValue}". Value will be treated as dip`, Trace.categories.Style, Trace.messageType.warn);
+				return lengthType.value;
+			}
+			return lengthType;
+		}
+
+		return fromValue;
+	}
+
+	export function equals(a: CoreTypes.MaxLengthType, b: CoreTypes.MaxLengthType): boolean {
+		if (a == 'none') {
+			return b == 'none';
+		}
+
+		if (b == 'none') {
+			return false;
+		}
+
+		return equalsCommon(a, b);
+	}
+
+	export function toDevicePixels(length: CoreTypes.MaxLengthType, none?: number): number {
+		if (length == 'none') {
+			return none;
+		}
+
+		return toDevicePixelsCommon(length, none);
+	}
+
+	export function convertToString(length: CoreTypes.MaxLengthType): string {
+		if (length == 'none') {
+			return length;
+		}
+
+		return convertToStringCommon(length);
+	}
 }
 
 export const minWidthProperty = new CssProperty<Style, CoreTypes.LengthType>({
@@ -219,6 +290,42 @@ export const minHeightProperty = new CssProperty<Style, CoreTypes.LengthType>({
 	valueConverter: Length.parse,
 });
 minHeightProperty.register(Style);
+
+export const maxWidthProperty = new CssProperty<Style, CoreTypes.MaxLengthType>({
+	name: 'maxWidth',
+	cssName: 'max-width',
+	defaultValue: 'none',
+	affectsLayout: global.isIOS,
+	equalityComparer: MaxLength.equals,
+	valueChanged: (target, oldValue, newValue) => {
+		const view = target.viewRef.get();
+		if (view) {
+			view.effectiveMaxWidth = MaxLength.toDevicePixels(newValue, layout.MAX_MEASURED_SIZE);
+		} else {
+			Trace.write(`${newValue} not set to view's property because ".viewRef" is cleared`, Trace.categories.Style, Trace.messageType.warn);
+		}
+	},
+	valueConverter: MaxLength.parse,
+});
+maxWidthProperty.register(Style);
+
+export const maxHeightProperty = new CssProperty<Style, CoreTypes.MaxLengthType>({
+	name: 'maxHeight',
+	cssName: 'max-height',
+	defaultValue: 'none',
+	affectsLayout: global.isIOS,
+	equalityComparer: MaxLength.equals,
+	valueChanged: (target, oldValue, newValue) => {
+		const view = target.viewRef.get();
+		if (view) {
+			view.effectiveMaxHeight = MaxLength.toDevicePixels(newValue, layout.MAX_MEASURED_SIZE);
+		} else {
+			Trace.write(`${newValue} not set to view's property because ".viewRef" is cleared`, Trace.categories.Style, Trace.messageType.warn);
+		}
+	},
+	valueConverter: MaxLength.parse,
+});
+maxHeightProperty.register(Style);
 
 export const widthProperty = new CssAnimationProperty<Style, CoreTypes.PercentLengthType>({
 	name: 'width',

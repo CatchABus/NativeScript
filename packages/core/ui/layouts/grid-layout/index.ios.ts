@@ -107,23 +107,20 @@ export class GridLayout extends GridLayoutBase {
 	public onMeasure(widthMeasureSpec: number, heightMeasureSpec: number): void {
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 
-		let measureWidth = 0;
-		let measureHeight = 0;
-
 		const width = layout.getMeasureSpecSize(widthMeasureSpec);
 		const widthMode = layout.getMeasureSpecMode(widthMeasureSpec);
 
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		const horizontalPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
-		const verticalPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
+		const hPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
+		const vPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
 
 		const infinityWidth = widthMode === layout.UNSPECIFIED;
 		const infinityHeight = heightMode === layout.UNSPECIFIED;
 
-		this.helper.width = Math.max(0, width - horizontalPaddingsAndMargins);
-		this.helper.height = Math.max(0, height - verticalPaddingsAndMargins);
+		this.helper.width = Math.max(0, width - hPaddingsAndMargins);
+		this.helper.height = Math.max(0, height - vPaddingsAndMargins);
 
 		this.helper.stretchedHorizontally = widthMode === layout.EXACTLY || (this.horizontalAlignment === 'stretch' && !infinityWidth);
 		this.helper.stretchedVertically = heightMode === layout.EXACTLY || (this.verticalAlignment === 'stretch' && !infinityHeight);
@@ -146,13 +143,8 @@ export class GridLayout extends GridLayoutBase {
 
 		this.helper.measure();
 
-		// Add in our padding
-		measureWidth = this.helper.measuredWidth + horizontalPaddingsAndMargins;
-		measureHeight = this.helper.measuredHeight + verticalPaddingsAndMargins;
-
-		// Check against our minimum sizes
-		measureWidth = Math.max(measureWidth, this.effectiveMinWidth);
-		measureHeight = Math.max(measureHeight, this.effectiveMinHeight);
+		const measureWidth = this._calculatePreferredWidth(this.helper.measuredWidth + hPaddingsAndMargins);
+		const measureHeight = this._calculatePreferredHeight(this.helper.measuredHeight + vPaddingsAndMargins);
 
 		const widthSizeAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightSizeAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

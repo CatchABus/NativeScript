@@ -179,6 +179,8 @@ export class Style extends Observable implements StyleDefinition {
 
 	public minWidth: CoreTypes.LengthType;
 	public minHeight: CoreTypes.LengthType;
+	public maxWidth: CoreTypes.MaxLengthType;
+	public maxHeight: CoreTypes.MaxLengthType;
 	public width: CoreTypes.PercentLengthType;
 	public height: CoreTypes.PercentLengthType;
 	public margin: string | CoreTypes.PercentLengthType;

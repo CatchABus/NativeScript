@@ -10,7 +10,7 @@ import { Trace } from '../../../trace';
 import { ShowModalOptions, hiddenProperty } from '../view-base';
 import { EventData } from '../../../data/observable';
 
-import { perspectiveProperty, visibilityProperty, opacityProperty, horizontalAlignmentProperty, verticalAlignmentProperty, minWidthProperty, minHeightProperty, widthProperty, heightProperty, marginLeftProperty, marginTopProperty, marginRightProperty, marginBottomProperty, rotateProperty, rotateXProperty, rotateYProperty, scaleXProperty, scaleYProperty, translateXProperty, translateYProperty, zIndexProperty, backgroundInternalProperty, androidElevationProperty, androidDynamicElevationOffsetProperty } from '../../styling/style-properties';
+import { perspectiveProperty, visibilityProperty, opacityProperty, horizontalAlignmentProperty, verticalAlignmentProperty, minWidthProperty, minHeightProperty, maxWidthProperty, maxHeightProperty, widthProperty, heightProperty, marginLeftProperty, marginTopProperty, marginRightProperty, marginBottomProperty, rotateProperty, rotateXProperty, rotateYProperty, scaleXProperty, scaleYProperty, translateXProperty, translateYProperty, zIndexProperty, backgroundInternalProperty, androidElevationProperty, androidDynamicElevationOffsetProperty } from '../../styling/style-properties';
 import { CoreTypes } from '../../../core-types';
 
 import { Background, BackgroundClearFlags, refreshBorderDrawable } from '../../styling/background';
@@ -1122,6 +1122,22 @@ export class View extends ViewCommon {
 		}
 	}
 
+	[maxWidthProperty.setNative](value: CoreTypes.MaxLengthType) {
+		if (this.parent instanceof CustomLayoutView && this.parent.nativeViewProtected) {
+			this.parent._setChildMaxWidthNative(this, value);
+		} else {
+			this._setMaxWidthNative(value);
+		}
+	}
+
+	[maxHeightProperty.setNative](value: CoreTypes.MaxLengthType) {
+		if (this.parent instanceof CustomLayoutView && this.parent.nativeViewProtected) {
+			this.parent._setChildMaxHeightNative(this, value);
+		} else {
+			this._setMaxHeightNative(value);
+		}
+	}
+
 	public _applyBackground(background: Background, isBorderDrawable: boolean, onlyColor: boolean, backgroundDrawable: android.graphics.drawable.Drawable) {
 		const nativeView = <NativeScriptAndroidView>this.nativeViewProtected;
 
@@ -1315,6 +1331,14 @@ export class CustomLayoutView extends ContainerView implements CustomLayoutViewD
 		child._setMinHeightNative(value);
 	}
 
+	public _setChildMaxWidthNative(child: View, value: CoreTypes.MaxLengthType): void {
+		child._setMaxWidthNative(value);
+	}
+
+	public _setChildMaxHeightNative(child: View, value: CoreTypes.MaxLengthType): void {
+		child._setMaxHeightNative(value);
+	}
+
 	public _removeViewFromNativeVisualTree(child: ViewCommon): void {
 		super._removeViewFromNativeVisualTree(child);
 
@@ -1466,5 +1490,19 @@ createNativePercentLengthProperty({
 	setter: '_setMinHeightNative',
 	get setPixels() {
 		return org.nativescript.widgets.ViewHelper.setMinHeight;
+	},
+});
+
+createNativePercentLengthProperty({
+	setter: '_setMaxWidthNative',
+	get setPixels() {
+		return org.nativescript.widgets.ViewHelper.setMaxWidth;
+	},
+});
+
+createNativePercentLengthProperty({
+	setter: '_setMaxHeightNative',
+	get setPixels() {
+		return org.nativescript.widgets.ViewHelper.setMaxHeight;
 	},
 });

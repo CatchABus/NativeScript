@@ -29,8 +29,11 @@ export namespace CoreTypes {
 	export type LengthPxUnit = { readonly unit: 'px'; readonly value: px };
 	export type LengthPercentUnit = { readonly unit: '%'; readonly value: percent };
 
-	export type LengthType = 'auto' | dip | LengthDipUnit | LengthPxUnit;
-	export type PercentLengthType = 'auto' | dip | LengthDipUnit | LengthPxUnit | LengthPercentUnit;
+	export type AbsoluteLengthType = dip | LengthDipUnit | LengthPxUnit;
+	export type UnitLengthType = AbsoluteLengthType | LengthPercentUnit;
+	export type LengthType = 'auto' | Exclude<UnitLengthType, LengthPercentUnit>;
+	export type MaxLengthType = 'none' | Exclude<UnitLengthType, LengthPercentUnit>;
+	export type PercentLengthType = 'auto' | UnitLengthType;
 
 	export const zeroLength: LengthType = {
 		value: 0,

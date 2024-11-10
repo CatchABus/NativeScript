@@ -9,6 +9,7 @@ export namespace layout {
 	 */
 	export const MEASURED_HEIGHT_STATE_SHIFT: number;
 	export const MEASURED_SIZE_MASK: number;
+	export const MAX_MEASURED_SIZE: number;
 	export const MEASURED_STATE_MASK: number;
 	export const MEASURED_STATE_TOO_SMALL: number;
 	export const UNSPECIFIED: number;

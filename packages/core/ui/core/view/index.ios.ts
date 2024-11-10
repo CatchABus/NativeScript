@@ -8,7 +8,7 @@ import { Trace } from '../../../trace';
 import { layout, ios as iosUtils, SDK_VERSION } from '../../../utils';
 import { IOSHelper } from './view-helper';
 import { ios as iosBackground, Background } from '../../styling/background';
-import { perspectiveProperty, visibilityProperty, opacityProperty, rotateProperty, rotateXProperty, rotateYProperty, scaleXProperty, scaleYProperty, translateXProperty, translateYProperty, zIndexProperty, backgroundInternalProperty } from '../../styling/style-properties';
+import { perspectiveProperty, visibilityProperty, opacityProperty, rotateProperty, rotateXProperty, rotateYProperty, scaleXProperty, scaleYProperty, translateXProperty, translateYProperty, zIndexProperty, backgroundInternalProperty, PercentLength } from '../../styling/style-properties';
 import { profile } from '../../../profiling';
 import { accessibilityEnabledProperty, accessibilityHiddenProperty, accessibilityHintProperty, accessibilityIdentifierProperty, accessibilityLabelProperty, accessibilityLanguageProperty, accessibilityLiveRegionProperty, accessibilityMediaSessionProperty, accessibilityRoleProperty, accessibilityStateProperty, accessibilityValueProperty, accessibilityIgnoresInvertColorsProperty } from '../../../accessibility/accessibility-properties';
 import { IOSPostAccessibilityNotificationType, isAccessibilityServiceEnabled, updateAccessibilityProperties, AccessibilityEventOptions, AccessibilityRole, AccessibilityState } from '../../../accessibility';
@@ -175,25 +175,42 @@ export class View extends ViewCommon implements ViewDefinition {
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		let nativeWidth = 0;
-		let nativeHeight = 0;
+		let measureWidth: number;
+		let measureHeight: number;
+
 		if (view) {
 			const nativeSize = layout.measureNativeView(view, width, widthMode, height, heightMode);
-			nativeWidth = nativeSize.width;
-			nativeHeight = nativeSize.height;
+			measureWidth = nativeSize.width;
+			measureWidth = nativeSize.height;
+		} else {
+			measureWidth = 0;
+			measureHeight = 0;
 		}
 
-		const measureWidth = Math.max(nativeWidth, this.effectiveMinWidth);
-		const measureHeight = Math.max(nativeHeight, this.effectiveMinHeight);
-
-		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
-		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);
+		const widthAndState = View.resolveSizeAndState(this._calculatePreferredWidth(measureWidth), width, widthMode, 0);
+		const heightAndState = View.resolveSizeAndState(this._calculatePreferredHeight(measureHeight), height, heightMode, 0);
 
 		this.setMeasuredDimension(widthAndState, heightAndState);
 	}
 
 	public onLayout(left: number, top: number, right: number, bottom: number): void {
 		//
+	}
+
+	public _updateEffectiveLayoutValues(parentWidthMeasureSize: number, parentWidthMeasureMode: number, parentHeightMeasureSize: number, parentHeightMeasureMode: number): void {
+		const style = this.style;
+
+		const availableWidth = parentWidthMeasureMode === layout.UNSPECIFIED ? -1 : parentWidthMeasureSize;
+
+		this.effectiveWidth = PercentLength.toDevicePixels(style.width, -2, availableWidth);
+		this.effectiveMarginLeft = PercentLength.toDevicePixels(style.marginLeft, 0, availableWidth);
+		this.effectiveMarginRight = PercentLength.toDevicePixels(style.marginRight, 0, availableWidth);
+
+		const availableHeight = parentHeightMeasureMode === layout.UNSPECIFIED ? -1 : parentHeightMeasureSize;
+
+		this.effectiveHeight = PercentLength.toDevicePixels(style.height, -2, availableHeight);
+		this.effectiveMarginTop = PercentLength.toDevicePixels(style.marginTop, 0, availableHeight);
+		this.effectiveMarginBottom = PercentLength.toDevicePixels(style.marginBottom, 0, availableHeight);
 	}
 
 	public _setNativeViewFrame(nativeView: UIView, frame: CGRect): void {
@@ -371,6 +388,36 @@ export class View extends ViewCommon implements ViewDefinition {
 			x: myPointInWindow.x - otherPointInWindow.x,
 			y: myPointInWindow.y - otherPointInWindow.y,
 		};
+	}
+
+	public _calculatePreferredWidth(width: number): number {
+		// Maximum width
+		if (this.effectiveMaxWidth < width) {
+			width = this.effectiveMaxWidth;
+		}
+
+		// Minimum width
+		// Maximum overrides width while minimum overrides maximum
+		if (this.effectiveMinWidth > width) {
+			width = this.effectiveMinWidth;
+		}
+
+		return width;
+	}
+
+	public _calculatePreferredHeight(height: number): number {
+		// Maximum height
+		if (this.effectiveMaxHeight < height) {
+			height = this.effectiveMaxHeight;
+		}
+
+		// Minimum height
+		// Maximum overrides height while minimum overrides maximum
+		if (this.effectiveMinHeight > height) {
+			height = this.effectiveMinHeight;
+		}
+
+		return height;
 	}
 
 	_onSizeChanged(): void {

@@ -1,7 +1,8 @@
 import { FlexDirection, FlexWrap, JustifyContent, AlignItems, AlignContent, FlexboxLayoutBase, orderProperty, Order, flexGrowProperty, FlexGrow, flexShrinkProperty, FlexShrink, flexWrapBeforeProperty, FlexWrapBefore, alignSelfProperty, AlignSelf, flexDirectionProperty, flexWrapProperty, justifyContentProperty, alignItemsProperty, alignContentProperty } from './flexbox-layout-common';
 import { CoreTypes } from '../../../core-types';
 import { View } from '../../core/view';
-import { Length } from '../../styling/style-properties';
+import { Length, MaxLength } from '../../styling/style-properties';
+import { layout } from '../../../utils';
 
 export * from './flexbox-layout-common';
 
@@ -135,10 +136,12 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 	public _updateNativeLayoutParams(child: View): void {
 		super._updateNativeLayoutParams(child);
 
-		// NOTE: If minWidth/Height is not set, the next code will clear the default native values for minWidth/Height.
+		// NOTE: If preferred width/height is not set, the next code will clear the default native values for preferred width/height.
 		// Flex box will not respect the button default min width. Keeping this behavior for back-compatibility.
 		this._setChildMinWidthNative(child, child.minWidth);
 		this._setChildMinHeightNative(child, child.minHeight);
+		this._setChildMaxWidthNative(child, child.maxWidth);
+		this._setChildMaxHeightNative(child, child.maxHeight);
 
 		const lp = <org.nativescript.widgets.FlexboxLayout.LayoutParams>child.nativeViewProtected.getLayoutParams();
 		const style = child.style;
@@ -150,9 +153,9 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		child.nativeViewProtected.setLayoutParams(lp);
 	}
 
-	public _setChildMinWidthNative(child: View, value: CoreTypes.LengthType): void {
+	public override _setChildMinWidthNative(child: View, value: CoreTypes.LengthType): void {
 		// Check needed to maintain back-compat after https://github.com/NativeScript/NativeScript/pull/7804
-		if (!child._ignoreFlexMinWidthHeightReset) {
+		if (!child._ignoreFlexSizeConstraintsReset) {
 			child._setMinWidthNative(0);
 		}
 
@@ -164,9 +167,9 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		}
 	}
 
-	public _setChildMinHeightNative(child: View, value: CoreTypes.LengthType): void {
+	public override _setChildMinHeightNative(child: View, value: CoreTypes.LengthType): void {
 		// Check needed to maintain back-compat after https://github.com/NativeScript/NativeScript/pull/7804
-		if (!child._ignoreFlexMinWidthHeightReset) {
+		if (!child._ignoreFlexSizeConstraintsReset) {
 			child._setMinHeightNative(0);
 		}
 
@@ -174,6 +177,34 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		const lp = nativeView.getLayoutParams();
 		if (lp instanceof widgetLayoutParams) {
 			lp.minHeight = Length.toDevicePixels(value, 0);
+			nativeView.setLayoutParams(lp);
+		}
+	}
+
+	public override _setChildMaxWidthNative(child: View, value: CoreTypes.MaxLengthType): void {
+		// Check needed to maintain back-compat after https://github.com/NativeScript/NativeScript/pull/7804
+		if (!child._ignoreFlexSizeConstraintsReset) {
+			child._setMaxWidthNative(layout.MAX_MEASURED_SIZE);
+		}
+
+		const nativeView = child.nativeViewProtected;
+		const lp = nativeView.getLayoutParams();
+		if (lp instanceof widgetLayoutParams) {
+			lp.maxWidth = MaxLength.toDevicePixels(value, -1);
+			nativeView.setLayoutParams(lp);
+		}
+	}
+
+	public override _setChildMaxHeightNative(child: View, value: CoreTypes.MaxLengthType): void {
+		// Check needed to maintain back-compat after https://github.com/NativeScript/NativeScript/pull/7804
+		if (!child._ignoreFlexSizeConstraintsReset) {
+			child._setMaxHeightNative(layout.MAX_MEASURED_SIZE);
+		}
+
+		const nativeView = child.nativeViewProtected;
+		const lp = nativeView.getLayoutParams();
+		if (lp instanceof widgetLayoutParams) {
+			lp.maxHeight = MaxLength.toDevicePixels(value, -1);
 			nativeView.setLayoutParams(lp);
 		}
 	}

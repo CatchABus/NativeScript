@@ -7,7 +7,7 @@ import { Font, FontStyleType, FontWeightType, FontVariationSettingsType } from '
 import { Background } from './background';
 
 export namespace Length {
-	export function parse(text: string): CoreTypes.LengthType;
+	export function parse(text: string | CoreTypes.LengthType): CoreTypes.LengthType;
 	export function equals(a: CoreTypes.LengthType, b: CoreTypes.LengthType): boolean;
 	/**
 	 * Converts Length unit to device pixels.
@@ -18,8 +18,20 @@ export namespace Length {
 	export function convertToString(length: CoreTypes.LengthType): string;
 }
 
+export namespace MaxLength {
+	export function parse(text: string | CoreTypes.MaxLengthType): CoreTypes.MaxLengthType;
+	export function equals(a: CoreTypes.MaxLengthType, b: CoreTypes.MaxLengthType): boolean;
+	/**
+	 * Converts Length unit to device pixels.
+	 * @param length The Length to convert.
+	 * @param none Value to use for conversion of "none". By default is Math.NaN.
+	 */
+	export function toDevicePixels(length: CoreTypes.MaxLengthType, none?: number): number;
+	export function convertToString(length: CoreTypes.MaxLengthType): string;
+}
+
 export namespace PercentLength {
-	export function parse(text: string): CoreTypes.PercentLengthType;
+	export function parse(text: string | CoreTypes.LengthType): CoreTypes.PercentLengthType;
 	export function equals(a: CoreTypes.PercentLengthType, b: CoreTypes.PercentLengthType): boolean;
 	/**
 	 * Converts PercentLengthType unit to device pixels.
@@ -73,8 +85,10 @@ export const zIndexProperty: CssProperty<Style, number>;
 export const visibilityProperty: CssProperty<Style, CoreTypes.VisibilityType>;
 export const opacityProperty: CssAnimationProperty<Style, number>;
 
-export const minWidthProperty: CssProperty<Style, CoreTypes.dip | CoreTypes.LengthDipUnit | CoreTypes.LengthPxUnit>;
-export const minHeightProperty: CssProperty<Style, CoreTypes.dip | CoreTypes.LengthDipUnit | CoreTypes.LengthPxUnit>;
+export const minWidthProperty: CssProperty<Style, CoreTypes.LengthType>;
+export const minHeightProperty: CssProperty<Style, CoreTypes.LengthType>;
+export const maxWidthProperty: CssProperty<Style, CoreTypes.MaxLengthType>;
+export const maxHeightProperty: CssProperty<Style, CoreTypes.MaxLengthType>;
 export const widthProperty: CssAnimationProperty<Style, CoreTypes.PercentLengthType>;
 export const heightProperty: CssAnimationProperty<Style, CoreTypes.PercentLengthType>;
 export const marginProperty: ShorthandProperty<Style, string | CoreTypes.PercentLengthType>;

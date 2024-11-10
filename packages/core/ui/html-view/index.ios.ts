@@ -45,12 +45,10 @@ export class HtmlView extends HtmlViewBase {
 
 			const height = layout.getMeasureSpecSize(heightMeasureSpec);
 			const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
-
 			const desiredSize = layout.measureNativeView(nativeView, width, widthMode, height, heightMode);
 
-			const labelWidth = widthMode === layout.AT_MOST ? Math.min(desiredSize.width, width) : desiredSize.width;
-			const measureWidth = Math.max(labelWidth, this.effectiveMinWidth);
-			const measureHeight = Math.max(desiredSize.height, this.effectiveMinHeight);
+			const measureWidth = this._calculatePreferredWidth(widthMode === layout.AT_MOST ? Math.min(desiredSize.width, width) : desiredSize.width);
+			const measureHeight = this._calculatePreferredHeight(desiredSize.height);
 
 			const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 			const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

@@ -3,8 +3,10 @@ package org.nativescript.widgets;
 import android.annotation.TargetApi;
 import android.graphics.Rect;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 /**
@@ -17,6 +19,8 @@ public class ViewHelper {
 	}
 
 	static final int version = android.os.Build.VERSION.SDK_INT;
+
+	public static final int MAX_MEASURED_SIZE = Integer.MAX_VALUE & View.MEASURED_SIZE_MASK;
 
 	public static int getMinWidth(android.view.View view) {
 		return view.getMinimumWidth();
@@ -40,6 +44,95 @@ public class ViewHelper {
 		}
 
 		view.setMinimumHeight(value);
+	}
+
+
+	public static int getMaxWidth(android.view.View view) {
+		int maxWidth;
+
+		if (view instanceof TextView) {
+			maxWidth = ((android.widget.TextView) view).getMaxWidth() & View.MEASURED_SIZE_MASK;
+		} else if (view instanceof ImageView) {
+			maxWidth = ((android.widget.ImageView) view).getMaxWidth() & View.MEASURED_SIZE_MASK;
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+			if (params == null) {
+				params = new CommonLayoutParams();
+			}
+
+			if (params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+				maxWidth = lp.maxWidth;
+			} else {
+				maxWidth = MAX_MEASURED_SIZE;
+			}
+		}
+
+		return maxWidth;
+	}
+
+	public static void setMaxWidth(android.view.View view, int value) {
+		if (view instanceof TextView) {
+			((android.widget.TextView) view).setMaxWidth(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
+		} else if (view instanceof ImageView) {
+			((android.widget.ImageView) view).setMaxWidth(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+			if (params == null) {
+				params = new CommonLayoutParams();
+			}
+
+			if (params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+	
+				lp.maxWidth = value;
+				view.setLayoutParams(lp);
+			}
+		}
+	}
+
+	public static int getMaxHeight(android.view.View view) {
+		int maxHeight;
+
+		if (view instanceof TextView) {
+			maxHeight = ((android.widget.TextView) view).getMaxHeight() & View.MEASURED_SIZE_MASK;
+		} else if (view instanceof ImageView) {
+			maxHeight = ((android.widget.ImageView) view).getMaxHeight() & View.MEASURED_SIZE_MASK;
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+			if (params == null) {
+				params = new CommonLayoutParams();
+			}
+
+			if (params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+				maxHeight = lp.maxHeight;
+			} else {
+				maxHeight = MAX_MEASURED_SIZE;
+			}
+		}
+
+		return maxHeight;
+	}
+
+	public static void setMaxHeight(android.view.View view, int value) {
+		if (view instanceof TextView) {
+			((android.widget.TextView) view).setMaxHeight(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
+		} else if (view instanceof ImageView) {
+			((android.widget.ImageView) view).setMaxHeight(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+			if (params == null) {
+				params = new CommonLayoutParams();
+			}
+
+			if (params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+
+				lp.maxHeight = value;
+				view.setLayoutParams(params);
+			}
+		}
 	}
 
 	public static int getWidth(android.view.View view) {
@@ -547,7 +640,7 @@ public class ViewHelper {
 	}
 
 	@TargetApi(21)
-	public static float getLetterspacing(android.widget.TextView textView) {
+	public static float getLetterSpacing(android.widget.TextView textView) {
 		if (ViewHelper.version >= 21) {
 			return textView.getLetterSpacing();
 		}
@@ -556,7 +649,7 @@ public class ViewHelper {
 	}
 
 	@TargetApi(21)
-	public static void setLetterspacing(android.widget.TextView textView, float value) {
+	public static void setLetterSpacing(android.widget.TextView textView, float value) {
 		if (ViewHelper.version >= 21) {
 			textView.setLetterSpacing(value);
 		}

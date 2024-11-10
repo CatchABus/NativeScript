@@ -456,7 +456,7 @@ export class ActionBar extends ActionBarBase {
 			}
 		});
 
-		// We ignore our width/height, minWidth/minHeight dimensions because it is against Apple policy to change height of NavigationBar.
+		// We ignore our width/height, minWidth/minHeight, maxWidth/maxHeight dimensions because it is against Apple policy to change height of NavigationBar.
 		this.setMeasuredDimension(width, height);
 	}
 

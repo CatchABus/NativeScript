@@ -340,6 +340,16 @@ export abstract class View extends ViewCommon {
 	minHeight: CoreTypes.LengthType;
 
 	/**
+	 * Gets or sets the maximum width the view may grow to.
+	 */
+	maxWidth: CoreTypes.MaxLengthType;
+
+	/**
+	 * Gets or sets the maximum height the view may grow to.
+	 */
+	maxHeight: CoreTypes.MaxLengthType;
+
+	/**
 	 * Gets or sets the desired width of the view.
 	 */
 	width: CoreTypes.PercentLengthType;
@@ -727,6 +737,9 @@ export abstract class View extends ViewCommon {
 
 	_eachLayoutView(callback: (View) => void): void;
 
+	_calculatePreferredWidth?(width: number): number;
+	_calculatePreferredHeight?(height: number): number;
+
 	/**
 	 * iOS Only Internal method used to update various view details like background rerendering, border, etc.
 	 */
@@ -846,6 +859,14 @@ export abstract class View extends ViewCommon {
 	/**
 	 * @private
 	 */
+	_setMaxWidthNative(value: CoreTypes.MaxLengthType): void;
+	/**
+	 * @private
+	 */
+	_setMaxHeightNative(value: CoreTypes.MaxLengthType): void;
+	/**
+	 * @private
+	 */
 	_redrawNativeBackground(value: any): void;
 	/**
 	 * @private
@@ -929,6 +950,14 @@ export class CustomLayoutView extends ContainerView {
 	 * @private
 	 */
 	_setChildMinHeightNative(child: View, value: CoreTypes.LengthType): void;
+	/**
+	 * @private
+	 */
+	_setChildMaxWidthNative(child: View, value: CoreTypes.MaxLengthType): void;
+	/**
+	 * @private
+	 */
+	_setChildMaxHeightNative(child: View, value: CoreTypes.MaxLengthType): void;
 	//@endprivate
 }
 

@@ -85,14 +85,8 @@ export class Label extends TextBase implements LabelDefinition {
 				nativeSize = layout.measureNativeView(nativeView, width, widthMode, height, heightMode);
 			}
 
-			let labelWidth = nativeSize.width;
-
-			if (this.textWrap && widthMode === layout.AT_MOST) {
-				labelWidth = Math.min(labelWidth, width);
-			}
-
-			const measureWidth = Math.max(labelWidth, this.effectiveMinWidth);
-			const measureHeight = Math.max(nativeSize.height, this.effectiveMinHeight);
+			const measureWidth = this._calculatePreferredWidth(this.textWrap && widthMode === layout.AT_MOST ? Math.min(nativeSize.width, width) : nativeSize.width);
+			const measureHeight = this._calculatePreferredHeight(nativeSize.height);
 
 			const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 			const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);
@@ -158,7 +152,7 @@ export class Label extends TextBase implements LabelDefinition {
 						const cgColor = color ? color.CGColor : null;
 						nativeView.layer.backgroundColor = cgColor;
 					},
-					true
+					true,
 				);
 			}
 		}

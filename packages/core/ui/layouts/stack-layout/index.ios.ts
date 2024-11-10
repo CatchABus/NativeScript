@@ -22,8 +22,8 @@ export class StackLayout extends StackLayoutBase {
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
 		const isVertical = this.orientation === 'vertical';
-		const horizontalPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
-		const verticalPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
+		const hPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
+		const vPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
 
 		let measureSpec: number;
 
@@ -35,16 +35,16 @@ export class StackLayout extends StackLayoutBase {
 			remainingLength = 0;
 		} else {
 			measureSpec = layout.AT_MOST;
-			remainingLength = isVertical ? height - verticalPaddingsAndMargins : width - horizontalPaddingsAndMargins;
+			remainingLength = isVertical ? height - vPaddingsAndMargins : width - hPaddingsAndMargins;
 		}
 
 		let childMeasureSpec: number;
 		if (isVertical) {
-			let childWidth = widthMode === layout.UNSPECIFIED ? 0 : width - horizontalPaddingsAndMargins;
+			let childWidth = widthMode === layout.UNSPECIFIED ? 0 : width - hPaddingsAndMargins;
 			childWidth = Math.max(0, childWidth);
 			childMeasureSpec = layout.makeMeasureSpec(childWidth, widthMode);
 		} else {
-			let childHeight = heightMode === layout.UNSPECIFIED ? 0 : height - verticalPaddingsAndMargins;
+			let childHeight = heightMode === layout.UNSPECIFIED ? 0 : height - vPaddingsAndMargins;
 			childHeight = Math.max(0, childHeight);
 			childMeasureSpec = layout.makeMeasureSpec(childHeight, heightMode);
 		}
@@ -75,12 +75,8 @@ export class StackLayout extends StackLayoutBase {
 			}
 		});
 
-		measureWidth += horizontalPaddingsAndMargins;
-		measureHeight += verticalPaddingsAndMargins;
-
-		// Check against our minimum sizes
-		measureWidth = Math.max(measureWidth, this.effectiveMinWidth);
-		measureHeight = Math.max(measureHeight, this.effectiveMinHeight);
+		measureWidth = this._calculatePreferredWidth(measureWidth + hPaddingsAndMargins);
+		measureHeight = this._calculatePreferredHeight(measureHeight + vPaddingsAndMargins);
 
 		this._totalLength = isVertical ? measureHeight : measureWidth;
 

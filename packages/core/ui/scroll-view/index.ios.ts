@@ -156,8 +156,8 @@ export class ScrollView extends ScrollViewBase {
 				childSize = View.measureChild(this, child, layout.makeMeasureSpec(0, layout.UNSPECIFIED), heightMeasureSpec);
 			}
 
-			this._contentMeasuredWidth = Math.max(childSize.measuredWidth, this.effectiveMinWidth);
-			this._contentMeasuredHeight = Math.max(childSize.measuredHeight, this.effectiveMinHeight);
+			this._contentMeasuredWidth = this._calculatePreferredWidth(childSize.measuredWidth);
+			this._contentMeasuredHeight = this._calculatePreferredHeight(childSize.measuredHeight);
 		}
 
 		const widthAndState = View.resolveSizeAndState(this._contentMeasuredWidth, width, widthMode, 0);

@@ -179,6 +179,9 @@
                 public widthPercent: number;
                 public heightPercent: number;
 
+                public maxWidth: number;
+                public maxHeight: number;
+
                 public topMarginPercent: number;
                 public leftMarginPercent: number;
                 public bottomMarginPercent: number;
@@ -563,6 +566,12 @@
                 public static getMinHeight(view: android.view.View): number;
                 public static setMinHeight(view: android.view.View, value: number): void;
 
+                public static getMaxWidth(view: android.view.View): number;
+                public static setMaxWidth(view: android.view.View, value: number): void;
+
+                public static getMaxHeight(view: android.view.View): number;
+                public static setMaxHeight(view: android.view.View, value: number): void;
+
                 public static getWidth(view: android.view.View): number;
                 public static setWidth(view: android.view.View, value: number): void;
                 public static setWidthPercent(view: android.view.View, value: number): void;
@@ -637,8 +646,8 @@
                 public static getZIndex(view: android.view.View): number;
                 public static setZIndex(view: android.view.View, value: number): void;
 
-                public static getLetterspacing(view: android.view.View): number;
-                public static setLetterspacing(view: android.view.View, value: number): void;
+                public static getLetterSpacing(view: android.view.View): number;
+                public static setLetterSpacing(view: android.view.View, value: number): void;
 
                 public static setBackground(view: android.view.View, background: android.graphics.drawable.Drawable): void;
             }

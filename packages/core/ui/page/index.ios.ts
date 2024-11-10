@@ -500,8 +500,8 @@ export class Page extends PageBase {
 
 		const result = View.measureChild(this, this.layoutView, widthMeasureSpec, heightMeasureSpec);
 
-		const measureWidth = Math.max(result.measuredWidth, this.effectiveMinWidth);
-		const measureHeight = Math.max(result.measuredHeight, this.effectiveMinHeight);
+		const measureWidth = this._calculatePreferredWidth(result.measuredWidth);
+		const measureHeight = this._calculatePreferredHeight(result.measuredHeight);
 
 		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

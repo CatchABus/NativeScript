@@ -14,8 +14,6 @@ import { CoreTypes } from '../../../core-types';
 import { ViewHelper } from './view-helper';
 import { setupAccessibleView } from '../../../accessibility';
 
-import { PercentLength } from '../../styling/style-properties';
-
 import { observe as gestureObserve, GesturesObserver, GestureTypes, GestureEventData, fromString as gestureFromString, toString as gestureToString, TouchManager, TouchAnimationOptions, VisionHoverOptions } from '../../gestures';
 
 import { CSSUtils } from '../../../css/system-classes';
@@ -125,6 +123,8 @@ export abstract class ViewCommon extends ViewBase implements ViewDefinition {
 
 	_setMinWidthNative: (value: CoreTypes.LengthType) => void;
 	_setMinHeightNative: (value: CoreTypes.LengthType) => void;
+	_setMaxWidthNative: (value: CoreTypes.MaxLengthType) => void;
+	_setMaxHeightNative: (value: CoreTypes.MaxLengthType) => void;
 
 	public readonly _gestureObservers = {} as Record<GestureTypes, Array<GesturesObserver>>;
 
@@ -723,6 +723,21 @@ export abstract class ViewCommon extends ViewBase implements ViewDefinition {
 		this.style.minHeight = value;
 	}
 
+	get maxWidth(): CoreTypes.MaxLengthType {
+		return this.style.maxWidth;
+	}
+
+	set maxWidth(value: CoreTypes.MaxLengthType) {
+		this.style.maxWidth = value;
+	}
+
+	get maxHeight(): CoreTypes.MaxLengthType {
+		return this.style.maxHeight;
+	}
+	set maxHeight(value: CoreTypes.MaxLengthType) {
+		this.style.maxHeight = value;
+	}
+
 	get width(): CoreTypes.PercentLengthType {
 		return this.style.width;
 	}
@@ -1167,20 +1182,8 @@ export abstract class ViewCommon extends ViewBase implements ViewDefinition {
 		throw new Error('The View._setValue is obsolete. There is a new property system.');
 	}
 
-	_updateEffectiveLayoutValues(parentWidthMeasureSize: number, parentWidthMeasureMode: number, parentHeightMeasureSize: number, parentHeightMeasureMode: number): void {
-		const style = this.style;
-
-		const availableWidth = parentWidthMeasureMode === layout.UNSPECIFIED ? -1 : parentWidthMeasureSize;
-
-		this.effectiveWidth = PercentLength.toDevicePixels(style.width, -2, availableWidth);
-		this.effectiveMarginLeft = PercentLength.toDevicePixels(style.marginLeft, 0, availableWidth);
-		this.effectiveMarginRight = PercentLength.toDevicePixels(style.marginRight, 0, availableWidth);
-
-		const availableHeight = parentHeightMeasureMode === layout.UNSPECIFIED ? -1 : parentHeightMeasureSize;
-
-		this.effectiveHeight = PercentLength.toDevicePixels(style.height, -2, availableHeight);
-		this.effectiveMarginTop = PercentLength.toDevicePixels(style.marginTop, 0, availableHeight);
-		this.effectiveMarginBottom = PercentLength.toDevicePixels(style.marginBottom, 0, availableHeight);
+	public _updateEffectiveLayoutValues(parentWidthMeasureSize: number, parentWidthMeasureMode: number, parentHeightMeasureSize: number, parentHeightMeasureMode: number): void {
+		//
 	}
 
 	public _setNativeClipToBounds() {

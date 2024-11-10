@@ -62,6 +62,9 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 		this.dock = source.dock;
 	}
 
+	public int maxWidth = ViewHelper.MAX_MEASURED_SIZE;
+	public int maxHeight = ViewHelper.MAX_MEASURED_SIZE;
+
 	public float widthPercent = 0;
 	public float heightPercent = 0;
 

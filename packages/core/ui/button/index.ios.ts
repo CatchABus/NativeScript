@@ -274,11 +274,8 @@ export class Button extends ButtonBase {
 
 			const desiredSize = layout.measureNativeView(nativeView.titleLabel, width - horizontalPadding, widthMode, height - verticalPadding, heightMode);
 
-			desiredSize.width = desiredSize.width + horizontalPadding;
-			desiredSize.height = desiredSize.height + verticalPadding;
-
-			const measureWidth = Math.max(desiredSize.width, this.effectiveMinWidth);
-			const measureHeight = Math.max(desiredSize.height, this.effectiveMinHeight);
+			const measureWidth = this._calculatePreferredWidth(desiredSize.width + horizontalPadding);
+			const measureHeight = this._calculatePreferredHeight(desiredSize.height + verticalPadding);
 
 			const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 			const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

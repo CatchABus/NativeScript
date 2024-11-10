@@ -29,11 +29,11 @@ export class WrapLayout extends WrapLayoutBase {
 		const height = layout.getMeasureSpecSize(heightMeasureSpec);
 		const heightMode = layout.getMeasureSpecMode(heightMeasureSpec);
 
-		const horizontalPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
-		const verticalPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
+		const hPaddingsAndMargins = this.effectivePaddingLeft + this.effectivePaddingRight + this.effectiveBorderLeftWidth + this.effectiveBorderRightWidth;
+		const vPaddingsAndMargins = this.effectivePaddingTop + this.effectivePaddingBottom + this.effectiveBorderTopWidth + this.effectiveBorderBottomWidth;
 
-		const availableWidth = widthMode === layout.UNSPECIFIED ? Number.MAX_VALUE : width - horizontalPaddingsAndMargins;
-		const availableHeight = heightMode === layout.UNSPECIFIED ? Number.MAX_VALUE : height - verticalPaddingsAndMargins;
+		const availableWidth = widthMode === layout.UNSPECIFIED ? Number.MAX_VALUE : width - hPaddingsAndMargins;
+		const availableHeight = heightMode === layout.UNSPECIFIED ? Number.MAX_VALUE : height - vPaddingsAndMargins;
 
 		const childWidthMeasureSpec: number = WrapLayout.getChildMeasureSpec(widthMode, availableWidth, this.effectiveItemWidth);
 		const childHeightMeasureSpec: number = WrapLayout.getChildMeasureSpec(heightMode, availableHeight, this.effectiveItemHeight);
@@ -101,12 +101,8 @@ export class WrapLayout extends WrapLayoutBase {
 			});
 		}
 
-		measureWidth += horizontalPaddingsAndMargins;
-		measureHeight += verticalPaddingsAndMargins;
-
-		// Check against our minimum sizes
-		measureWidth = Math.max(measureWidth, this.effectiveMinWidth);
-		measureHeight = Math.max(measureHeight, this.effectiveMinHeight);
+		measureWidth = this._calculatePreferredWidth(measureWidth + hPaddingsAndMargins);
+		measureHeight = this._calculatePreferredHeight(measureHeight + vPaddingsAndMargins);
 
 		const widthAndState = View.resolveSizeAndState(measureWidth, width, widthMode, 0);
 		const heightAndState = View.resolveSizeAndState(measureHeight, height, heightMode, 0);

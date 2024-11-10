@@ -1,6 +1,6 @@
 import { ButtonBase } from './button-common';
 import { AndroidHelper, PseudoClassHandler } from '../core/view';
-import { paddingLeftProperty, paddingTopProperty, paddingRightProperty, paddingBottomProperty, Length, zIndexProperty, minWidthProperty, minHeightProperty } from '../styling/style-properties';
+import { paddingLeftProperty, paddingTopProperty, paddingRightProperty, paddingBottomProperty, Length, zIndexProperty, minWidthProperty, minHeightProperty, maxWidthProperty, maxHeightProperty } from '../styling/style-properties';
 import { textAlignmentProperty } from '../text-base';
 import { CoreTypes } from '../../core-types';
 import { profile } from '../../profiling';
@@ -118,6 +118,18 @@ export class Button extends ButtonBase {
 		return { value: dips, unit: 'px' };
 	}
 
+	[maxWidthProperty.getDefault](): CoreTypes.LengthType {
+		const dips = org.nativescript.widgets.ViewHelper.getMaxWidth(this.nativeViewProtected);
+
+		return { value: dips, unit: 'px' };
+	}
+
+	[maxHeightProperty.getDefault](): CoreTypes.LengthType {
+		const dips = org.nativescript.widgets.ViewHelper.getMaxHeight(this.nativeViewProtected);
+
+		return { value: dips, unit: 'px' };
+	}
+
 	[paddingTopProperty.getDefault](): CoreTypes.LengthType {
 		return { value: this._defaultPaddingTop, unit: 'px' };
 	}
@@ -184,4 +196,4 @@ export class Button extends ButtonBase {
 	}
 }
 
-Button.prototype._ignoreFlexMinWidthHeightReset = true;
+Button.prototype._ignoreFlexSizeConstraintsReset = true;

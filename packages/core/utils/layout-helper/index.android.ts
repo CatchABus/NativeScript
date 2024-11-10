@@ -22,6 +22,7 @@ export namespace layout {
 	export const MEASURED_STATE_TOO_SMALL = 0x01000000;
 	export const MEASURED_STATE_MASK = 0xff000000;
 	export const MEASURED_SIZE_MASK = 0x00ffffff;
+	export const MAX_MEASURED_SIZE = Number.MAX_SAFE_INTEGER & MEASURED_SIZE_MASK;
 
 	export function getMode(mode: number) {
 		return layoutCommon.getMode(mode);
