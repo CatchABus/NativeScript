@@ -107,27 +107,27 @@ export class Button extends ButtonBase {
 	}
 
 	[minWidthProperty.getDefault](): CoreTypes.LengthType {
-		const dips = org.nativescript.widgets.ViewHelper.getMinWidth(this.nativeViewProtected);
+		const dp = org.nativescript.widgets.ViewHelper.getMinWidth(this.nativeViewProtected);
 
-		return { value: dips, unit: 'px' };
+		return { value: dp, unit: 'px' };
 	}
 
 	[minHeightProperty.getDefault](): CoreTypes.LengthType {
-		const dips = org.nativescript.widgets.ViewHelper.getMinHeight(this.nativeViewProtected);
+		const dp = org.nativescript.widgets.ViewHelper.getMinHeight(this.nativeViewProtected);
 
-		return { value: dips, unit: 'px' };
+		return { value: dp, unit: 'px' };
 	}
 
 	[maxWidthProperty.getDefault](): CoreTypes.LengthType {
-		const dips = org.nativescript.widgets.ViewHelper.getMaxWidth(this.nativeViewProtected);
+		const dp = org.nativescript.widgets.ViewHelper.getMaxWidth(this.nativeViewProtected);
 
-		return { value: dips, unit: 'px' };
+		return { value: dp, unit: 'px' };
 	}
 
 	[maxHeightProperty.getDefault](): CoreTypes.LengthType {
-		const dips = org.nativescript.widgets.ViewHelper.getMaxHeight(this.nativeViewProtected);
+		const dp = org.nativescript.widgets.ViewHelper.getMaxHeight(this.nativeViewProtected);
 
-		return { value: dips, unit: 'px' };
+		return { value: dp, unit: 'px' };
 	}
 
 	[paddingTopProperty.getDefault](): CoreTypes.LengthType {
