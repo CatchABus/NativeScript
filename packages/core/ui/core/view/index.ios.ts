@@ -181,7 +181,7 @@ export class View extends ViewCommon implements ViewDefinition {
 		if (view) {
 			const nativeSize = layout.measureNativeView(view, width, widthMode, height, heightMode);
 			measureWidth = nativeSize.width;
-			measureWidth = nativeSize.height;
+			measureHeight = nativeSize.height;
 		} else {
 			measureWidth = 0;
 			measureHeight = 0;
