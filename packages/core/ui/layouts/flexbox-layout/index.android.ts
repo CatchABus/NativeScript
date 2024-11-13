@@ -162,7 +162,7 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		const nativeView = child.nativeViewProtected;
 		const lp = nativeView.getLayoutParams();
 		if (lp instanceof widgetLayoutParams) {
-			lp.minWidth = Length.toDevicePixels(value, 0);
+			lp.minFlexWidth = Length.toDevicePixels(value, 0);
 			nativeView.setLayoutParams(lp);
 		}
 	}
@@ -176,7 +176,7 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		const nativeView = child.nativeViewProtected;
 		const lp = nativeView.getLayoutParams();
 		if (lp instanceof widgetLayoutParams) {
-			lp.minHeight = Length.toDevicePixels(value, 0);
+			lp.minFlexHeight = Length.toDevicePixels(value, 0);
 			nativeView.setLayoutParams(lp);
 		}
 	}
@@ -190,7 +190,7 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		const nativeView = child.nativeViewProtected;
 		const lp = nativeView.getLayoutParams();
 		if (lp instanceof widgetLayoutParams) {
-			lp.maxWidth = MaxLength.toDevicePixels(value, -1);
+			lp.maxFlexWidth = MaxLength.toDevicePixels(value, -1);
 			nativeView.setLayoutParams(lp);
 		}
 	}
@@ -204,7 +204,7 @@ export class FlexboxLayout extends FlexboxLayoutBase {
 		const nativeView = child.nativeViewProtected;
 		const lp = nativeView.getLayoutParams();
 		if (lp instanceof widgetLayoutParams) {
-			lp.maxHeight = MaxLength.toDevicePixels(value, -1);
+			lp.maxFlexHeight = MaxLength.toDevicePixels(value, -1);
 			nativeView.setLayoutParams(lp);
 		}
 	}

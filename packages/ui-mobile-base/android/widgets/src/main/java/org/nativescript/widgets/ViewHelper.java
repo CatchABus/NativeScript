@@ -23,27 +23,89 @@ public class ViewHelper {
 	public static final int MAX_MEASURED_SIZE = Integer.MAX_VALUE & View.MEASURED_SIZE_MASK;
 
 	public static int getMinWidth(android.view.View view) {
-		return view.getMinimumWidth();
+		int minWidth;
+
+		if (view instanceof TextView) {
+			minWidth = ((android.widget.TextView) view).getMinWidth() & View.MEASURED_SIZE_MASK;
+		} else if (view instanceof ImageView) {
+			minWidth = ((android.widget.ImageView) view).getMinimumWidth() & View.MEASURED_SIZE_MASK;
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+
+			if (params != null && params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+				minWidth = lp.minWidth;
+			} else {
+				minWidth = MAX_MEASURED_SIZE;
+			}
+		}
+
+		return minWidth;
 	}
 
 	public static void setMinWidth(android.view.View view, int value) {
+		// Handling for unspecified size (e.g. wrap_content, match_parent)
 		if (view instanceof TextView) {
 			((android.widget.TextView) view).setMinWidth(value);
+		} else {
+			view.setMinimumWidth(value);
 		}
 
-		view.setMinimumWidth(value);
+		// Handling for exact size
+		ViewGroup.LayoutParams params = view.getLayoutParams();
+		if (params == null) {
+			params = new CommonLayoutParams();
+		}
+
+		if (params instanceof CommonLayoutParams) {
+			CommonLayoutParams lp = (CommonLayoutParams) params;
+
+			lp.minWidth = value;
+			view.setLayoutParams(lp);
+		}
 	}
 
 	public static int getMinHeight(android.view.View view) {
-		return view.getMinimumHeight();
+		int minHeight;
+
+		if (view instanceof TextView) {
+			minHeight = ((android.widget.TextView) view).getMinHeight() & View.MEASURED_SIZE_MASK;
+		} else if (view instanceof ImageView) {
+			minHeight = ((android.widget.ImageView) view).getMinimumHeight() & View.MEASURED_SIZE_MASK;
+		} else {
+			ViewGroup.LayoutParams params = view.getLayoutParams();
+
+			if (params != null && params instanceof CommonLayoutParams) {
+				CommonLayoutParams lp = (CommonLayoutParams) params;
+				minHeight = lp.minHeight;
+			} else {
+				minHeight = MAX_MEASURED_SIZE;
+			}
+		}
+
+		return minHeight;
 	}
 
 	public static void setMinHeight(android.view.View view, int value) {
+		// Handling for unspecified size (e.g. wrap_content, match_parent)
 		if (view instanceof TextView) {
 			((android.widget.TextView) view).setMinHeight(value);
+		} else {
+			view.setMinimumHeight(value);
 		}
 
-		view.setMinimumHeight(value);
+		// Handling for exact size
+		ViewGroup.LayoutParams params = view.getLayoutParams();
+		if (params == null) {
+			params = new CommonLayoutParams();
+		}
+
+		if (params instanceof CommonLayoutParams) {
+			CommonLayoutParams lp = (CommonLayoutParams) params;
+
+			lp.minHeight = value;
+			view.setLayoutParams(lp);
+		}
 	}
 
 
@@ -56,11 +118,8 @@ public class ViewHelper {
 			maxWidth = ((android.widget.ImageView) view).getMaxWidth() & View.MEASURED_SIZE_MASK;
 		} else {
 			ViewGroup.LayoutParams params = view.getLayoutParams();
-			if (params == null) {
-				params = new CommonLayoutParams();
-			}
 
-			if (params instanceof CommonLayoutParams) {
+			if (params != null && params instanceof CommonLayoutParams) {
 				CommonLayoutParams lp = (CommonLayoutParams) params;
 				maxWidth = lp.maxWidth;
 			} else {
@@ -72,22 +131,24 @@ public class ViewHelper {
 	}
 
 	public static void setMaxWidth(android.view.View view, int value) {
+		// Handling for unspecified size (e.g. wrap_content, match_parent)
 		if (view instanceof TextView) {
 			((android.widget.TextView) view).setMaxWidth(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
 		} else if (view instanceof ImageView) {
 			((android.widget.ImageView) view).setMaxWidth(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
-		} else {
-			ViewGroup.LayoutParams params = view.getLayoutParams();
-			if (params == null) {
-				params = new CommonLayoutParams();
-			}
+		}
 
-			if (params instanceof CommonLayoutParams) {
-				CommonLayoutParams lp = (CommonLayoutParams) params;
-	
-				lp.maxWidth = value;
-				view.setLayoutParams(lp);
-			}
+		// Handling for exact size
+		ViewGroup.LayoutParams params = view.getLayoutParams();
+		if (params == null) {
+			params = new CommonLayoutParams();
+		}
+
+		if (params instanceof CommonLayoutParams) {
+			CommonLayoutParams lp = (CommonLayoutParams) params;
+
+			lp.maxWidth = value;
+			view.setLayoutParams(lp);
 		}
 	}
 
@@ -98,40 +159,39 @@ public class ViewHelper {
 			maxHeight = ((android.widget.TextView) view).getMaxHeight() & View.MEASURED_SIZE_MASK;
 		} else if (view instanceof ImageView) {
 			maxHeight = ((android.widget.ImageView) view).getMaxHeight() & View.MEASURED_SIZE_MASK;
-		} else {
-			ViewGroup.LayoutParams params = view.getLayoutParams();
-			if (params == null) {
-				params = new CommonLayoutParams();
-			}
+		}
 
-			if (params instanceof CommonLayoutParams) {
-				CommonLayoutParams lp = (CommonLayoutParams) params;
-				maxHeight = lp.maxHeight;
-			} else {
-				maxHeight = MAX_MEASURED_SIZE;
-			}
+		ViewGroup.LayoutParams params = view.getLayoutParams();
+
+		if (params != null && params instanceof CommonLayoutParams) {
+			CommonLayoutParams lp = (CommonLayoutParams) params;
+			maxHeight = lp.maxHeight;
+		} else {
+			maxHeight = MAX_MEASURED_SIZE;
 		}
 
 		return maxHeight;
 	}
 
 	public static void setMaxHeight(android.view.View view, int value) {
+		// Handling for unspecified size (e.g. wrap_content, match_parent)
 		if (view instanceof TextView) {
 			((android.widget.TextView) view).setMaxHeight(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
 		} else if (view instanceof ImageView) {
 			((android.widget.ImageView) view).setMaxHeight(value == MAX_MEASURED_SIZE ? Integer.MAX_VALUE : value);
-		} else {
-			ViewGroup.LayoutParams params = view.getLayoutParams();
-			if (params == null) {
-				params = new CommonLayoutParams();
-			}
+		}
 
-			if (params instanceof CommonLayoutParams) {
-				CommonLayoutParams lp = (CommonLayoutParams) params;
+		// Handling for exact size
+		ViewGroup.LayoutParams params = view.getLayoutParams();
+		if (params == null) {
+			params = new CommonLayoutParams();
+		}
 
-				lp.maxHeight = value;
-				view.setLayoutParams(params);
-			}
+		if (params instanceof CommonLayoutParams) {
+			CommonLayoutParams lp = (CommonLayoutParams) params;
+
+			lp.maxHeight = value;
+			view.setLayoutParams(params);
 		}
 	}
 

@@ -67,10 +67,10 @@ import java.util.List;
  * <li>{@code layout_flexShrink}</li>
  * <li>{@code layout_flexBasisPercent}</li>
  * <li>{@code layout_alignSelf}</li>
- * <li>{@code layout_minWidth}</li>
- * <li>{@code layout_minHeight}</li>
- * <li>{@code layout_maxWidth}</li>
- * <li>{@code layout_maxHeight}</li>
+ * <li>{@code layout_minFlexWidth}</li>
+ * <li>{@code layout_minFlexHeight}</li>
+ * <li>{@code layout_maxFlexWidth}</li>
+ * <li>{@code layout_maxFlexHeight}</li>
  * <li>{@code layout_wrapBefore}</li>
  * </ul>
  */
@@ -614,8 +614,8 @@ public class FlexboxLayout extends LayoutBase {
 
 				// Check the size constraint after the first measurement for the child
 				// To prevent the child's width/height violate the size constraints imposed by the
-				// {@link LayoutParams#minWidth}, {@link LayoutParams#minHeight},
-				// {@link LayoutParams#maxWidth} and {@link LayoutParams#maxHeight} attributes.
+				// {@link LayoutParams#minFlexWidth}, {@link LayoutParams#minFlexHeight},
+				// {@link LayoutParams#maxFlexWidth} and {@link LayoutParams#maxFlexHeight} attributes.
 				// E.g. When the child's layout_width is wrap_content the measured width may be
 				// less than the min width after the first measurement.
 				checkSizeConstraints(child);
@@ -776,8 +776,8 @@ public class FlexboxLayout extends LayoutBase {
 
 			// Check the size constraint after the first measurement for the child
 			// To prevent the child's width/height violate the size constraints imposed by the
-			// {@link LayoutParams#minWidth}, {@link LayoutParams#minHeight},
-			// {@link LayoutParams#maxWidth} and {@link LayoutParams#maxHeight} attributes.
+			// {@link LayoutParams#minFlexWidth}, {@link LayoutParams#minFlexHeight},
+			// {@link LayoutParams#maxFlexWidth} and {@link LayoutParams#maxFlexHeight} attributes.
 			// E.g. When the child's layout_height is wrap_content the measured height may be
 			// less than the min height after the first measurement.
 			checkSizeConstraints(child);
@@ -829,8 +829,8 @@ public class FlexboxLayout extends LayoutBase {
 
 	/**
 	 * Checks if the view's width/height don't violate the minimum/maximum size constraints imposed
-	 * by the {@link LayoutParams#minWidth}, {@link LayoutParams#minHeight},
-	 * {@link LayoutParams#maxWidth} and {@link LayoutParams#maxHeight} attributes.
+	 * by the {@link LayoutParams#minFlexWidth}, {@link LayoutParams#minFlexHeight},
+	 * {@link LayoutParams#maxFlexWidth} and {@link LayoutParams#maxFlexHeight} attributes.
 	 *
 	 * @param view the view to be checked
 	 */
@@ -840,20 +840,20 @@ public class FlexboxLayout extends LayoutBase {
 		int childWidth = view.getMeasuredWidth();
 		int childHeight = view.getMeasuredHeight();
 
-		if (view.getMeasuredWidth() < lp.minWidth) {
+		if (view.getMeasuredWidth() < lp.minFlexWidth) {
 			needsMeasure = true;
-			childWidth = lp.minWidth;
-		} else if (view.getMeasuredWidth() > lp.maxWidth) {
+			childWidth = lp.minFlexWidth;
+		} else if (view.getMeasuredWidth() > lp.maxFlexWidth) {
 			needsMeasure = true;
-			childWidth = lp.maxWidth;
+			childWidth = lp.maxFlexWidth;
 		}
 
-		if (childHeight < lp.minHeight) {
+		if (childHeight < lp.minFlexHeight) {
 			needsMeasure = true;
-			childHeight = lp.minHeight;
-		} else if (childHeight > lp.maxHeight) {
+			childHeight = lp.minFlexHeight;
+		} else if (childHeight > lp.maxFlexHeight) {
 			needsMeasure = true;
-			childHeight = lp.maxHeight;
+			childHeight = lp.maxFlexHeight;
 		}
 		if (needsMeasure) {
 			view.measure(MeasureSpec.makeMeasureSpec(childWidth, MeasureSpec.EXACTLY),
@@ -981,14 +981,14 @@ public class FlexboxLayout extends LayoutBase {
 				if (!mChildrenFrozen[childIndex]) {
 					float rawCalculatedWidth = child.getMeasuredWidth() + unitSpace * lp.flexGrow + accumulatedRoundError;
 					int roundedCalculatedWidth = Math.round(rawCalculatedWidth);
-					if (roundedCalculatedWidth > lp.maxWidth) {
-						// This means the child can't expand beyond the value of the maxWidth attribute.
+					if (roundedCalculatedWidth > lp.maxFlexWidth) {
+						// This means the child can't expand beyond the value of the maxFlexWidth attribute.
 						// To adjust the flex line length to the size of maxMainSize, remaining
 						// positive free space needs to be re-distributed to other flex items
 						// (children views). In that case, invoke this method again with the same
 						// startIndex.
 						needsReExpand = true;
-						roundedCalculatedWidth = lp.maxWidth;
+						roundedCalculatedWidth = lp.maxFlexWidth;
 						mChildrenFrozen[childIndex] = true;
 						flexLine.mTotalFlexGrow -= lp.flexGrow;
 					} else {
@@ -1019,15 +1019,15 @@ public class FlexboxLayout extends LayoutBase {
 				if (!mChildrenFrozen[childIndex]) {
 					float rawCalculatedHeight = child.getMeasuredHeight() + unitSpace * lp.flexGrow;
 					int roundedCalculatedHeight = Math.round(rawCalculatedHeight);
-					if (roundedCalculatedHeight > lp.maxHeight) {
-						// This means the child can't expand beyond the value of the maxHeight
+					if (roundedCalculatedHeight > lp.maxFlexHeight) {
+						// This means the child can't expand beyond the value of the maxFlexHeight
 						// attribute.
 						// To adjust the flex line length to the size of maxMainSize, remaining
 						// positive free space needs to be re-distributed to other flex items
 						// (children views). In that case, invoke this method again with the same
 						// startIndex.
 						needsReExpand = true;
-						roundedCalculatedHeight = lp.maxHeight;
+						roundedCalculatedHeight = lp.maxFlexHeight;
 						mChildrenFrozen[childIndex] = true;
 						flexLine.mTotalFlexGrow -= lp.flexGrow;
 					} else {
@@ -1092,9 +1092,9 @@ public class FlexboxLayout extends LayoutBase {
 				if (!mChildrenFrozen[childIndex]) {
 					float rawCalculatedWidth = child.getMeasuredWidth() - unitShrink * lp.flexShrink + accumulatedRoundError;
 					int roundedCalculatedWidth = Math.round(rawCalculatedWidth);
-					if (roundedCalculatedWidth < lp.minWidth) {
+					if (roundedCalculatedWidth < lp.minFlexWidth) {
 						needsReShrink = true;
-						roundedCalculatedWidth = lp.minWidth;
+						roundedCalculatedWidth = lp.minFlexWidth;
 						mChildrenFrozen[childIndex] = true;
 						flexLine.mTotalFlexShrink -= lp.flexShrink;
 					} else {
@@ -1125,9 +1125,9 @@ public class FlexboxLayout extends LayoutBase {
 				if (!mChildrenFrozen[childIndex]) {
 					float rawCalculatedHeight = child.getMeasuredHeight() - unitShrink * lp.flexShrink + accumulatedRoundError;
 					int roundedCalculatedHeight = Math.round(rawCalculatedHeight);
-					if (roundedCalculatedHeight < lp.minHeight) {
+					if (roundedCalculatedHeight < lp.minFlexHeight) {
 						needsReShrink = true;
-						roundedCalculatedHeight = lp.minHeight;
+						roundedCalculatedHeight = lp.minFlexHeight;
 						mChildrenFrozen[childIndex] = true;
 						flexLine.mTotalFlexShrink -= lp.flexShrink;
 					} else {
@@ -2653,12 +2653,22 @@ public class FlexboxLayout extends LayoutBase {
 		/**
 		 * This attribute determines the minimum width the child can shrink to.
 		 */
-		public int minWidth;
+		public int minFlexWidth;
 
 		/**
 		 * This attribute determines the minimum height the child can shrink to.
 		 */
-		public int minHeight;
+		public int minFlexHeight;
+
+		/**
+		 * This attribute determines the max width the child can shrink to.
+		 */
+		public int maxFlexWidth;
+
+		/**
+		 * This attribute determines the max height the child can shrink to.
+		 */
+		public int maxFlexHeight;
 
 		/**
 		 * This attribute forces a flex line wrapping. i.e. if this is set to {@code true} for a

@@ -62,6 +62,9 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 		this.dock = source.dock;
 	}
 
+	public int minWidth = 0;
+	public int minHeight = 0;
+
 	public int maxWidth = ViewHelper.MAX_MEASURED_SIZE;
 	public int maxHeight = ViewHelper.MAX_MEASURED_SIZE;
 
@@ -199,7 +202,7 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 					sb.append(MeasureSpec.toString(widthMeasureSpec));
 					sb.append(", ");
 					sb.append(MeasureSpec.toString(heightMeasureSpec));
-					log(TAG, sb.toString());
+					Log.v(TAG, sb.toString());
 				}
 
 				child.measure(widthMeasureSpec, heightMeasureSpec);
@@ -219,7 +222,7 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 			sb.append(childRight);
 			sb.append(", ");
 			sb.append(childBottom);
-			log(TAG, sb.toString());
+			Log.v(TAG, sb.toString());
 		}
 
 		child.layout(childLeft, childTop, childRight, childBottom);
@@ -259,7 +262,7 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 			sb.append(MeasureSpec.toString(childWidthMeasureSpec));
 			sb.append(", ");
 			sb.append(MeasureSpec.toString(childHeightMeasureSpec));
-			log(TAG, sb.toString());
+			Log.v(TAG, sb.toString());
 		}
 
 		child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
@@ -288,16 +291,7 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 			if (params instanceof CommonLayoutParams) {
 				CommonLayoutParams lp = (CommonLayoutParams) child.getLayoutParams();
 				if (widthSpec != MeasureSpec.UNSPECIFIED) {
-					if (lp.widthPercent > 0) {
-						// If we get measured twice we will override the original value with the one calculated from percentValue from the first measure.
-						// So we set originalValue only the first time.
-						if (lp.widthOriginal == NOT_SET) {
-							lp.widthOriginal = lp.width;
-						}
-						lp.width = (int) (availableWidth * lp.widthPercent);
-					} else {
-						lp.widthOriginal = NOT_SET;
-					}
+					applyWidthConstraints(availableWidth, lp);
 
 					if (lp.leftMarginPercent > 0) {
 						if (lp.leftMarginOriginal == NOT_SET) {
@@ -319,14 +313,7 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 				}
 
 				if (heightSpec != MeasureSpec.UNSPECIFIED) {
-					if (lp.heightPercent > 0) {
-						if (lp.heightOriginal == NOT_SET) {
-							lp.heightOriginal = lp.height;
-						}
-						lp.height = (int) (availableHeight * lp.heightPercent);
-					} else {
-						lp.heightOriginal = NOT_SET;
-					}
+					applyHeightConstraints(availableHeight, lp);
 
 					if (lp.topMarginPercent > 0) {
 						if (lp.topMarginOriginal == NOT_SET) {
@@ -389,8 +376,74 @@ public class CommonLayoutParams extends FrameLayout.LayoutParams {
 		}
 	}
 
-	static void log(String tag, String message) {
-		Log.v(tag, message);
+	private static int applyWidthConstraints(int availableWidth, CommonLayoutParams lp) {
+		// Note: If we get measured twice we will override the original value with the one calculated from percentValue and min/max from the first measure.
+		// So we set originalValue only the first time.
+		boolean needsReset = true;
+
+		if (lp.widthPercent > 0) {
+			if (lp.widthOriginal == NOT_SET) {
+				lp.widthOriginal = lp.width;
+			}
+			lp.width = (int) (availableWidth * lp.widthPercent);
+			needsReset = false;
+		}
+
+		if (lp.maxWidth < lp.width) {
+			if (lp.widthOriginal == NOT_SET) {
+				lp.widthOriginal = lp.width;
+			}
+			lp.width = lp.maxWidth;
+			needsReset = false;
+		}
+
+		// Apply minimum last as it overrides maximum
+		if (lp.minWidth > lp.width) {
+			if (lp.widthOriginal == NOT_SET) {
+				lp.widthOriginal = lp.width;
+			}
+			lp.width = lp.minWidth;
+			needsReset = false;
+		}
+
+		if (needsReset) {
+			lp.widthOriginal = NOT_SET;
+		}
+	}
+
+	private static int applyHeightConstraints(int availableHeight, CommonLayoutParams lp) {
+		// Note: If we get measured twice we will override the original value with the one calculated from percentValue and min/max from the first measure.
+		// So we set originalValue only the first time.
+		boolean needsReset = true;
+
+		if (lp.heightPercent > 0) {
+			if (lp.heightOriginal == NOT_SET) {
+				lp.heightOriginal = lp.width;
+			}
+			lp.height = (int) (availableHeight * lp.heightPercent);
+			needsReset = false;
+		}
+
+		if (lp.maxHeight < lp.height) {
+			if (lp.heightOriginal == NOT_SET) {
+				lp.heightOriginal = lp.height;
+			}
+			lp.height = lp.maxHeight;
+			needsReset = false;
+		}
+
+		// Apply minimum last as it overrides maximum
+		if (lp.minHeight > lp.height) {
+			if (lp.heightOriginal == NOT_SET) {
+				lp.heightOriginal = lp.height;
+			}
+			lp.height = lp.minHeight;
+			needsReset = false;
+		}
+
+		if (needsReset) {
+			lp.heightOriginal = NOT_SET;
+		}
 	}
 
 	static StringBuilder getStringBuilder() {

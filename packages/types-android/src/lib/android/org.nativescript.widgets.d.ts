@@ -179,6 +179,9 @@
                 public widthPercent: number;
                 public heightPercent: number;
 
+                public minWidth: number;
+                public minHeight: number;
+
                 public maxWidth: number;
                 public maxHeight: number;
 
@@ -375,8 +378,10 @@
                     public flexShrink: number;
                     public alignSelf: number;
                     public wrapBefore: boolean;
-                    public minWidth: number;
-                    public minHeight: number;
+                    public minFlexWidth: number;
+                    public minFlexHeight: number;
+                    public maxFlexWidth: number;
+                    public maxFlexHeight: number;
                 }
             }
 
