@@ -7,14 +7,6 @@ import { layout } from '../../../utils';
 export * from './absolute-layout-common';
 
 export class AbsoluteLayout extends AbsoluteLayoutBase {
-	onLeftChanged(view: View, oldValue: CoreTypes.LengthType, newValue: CoreTypes.LengthType) {
-		this.requestLayout();
-	}
-
-	onTopChanged(view: View, oldValue: CoreTypes.LengthType, newValue: CoreTypes.LengthType) {
-		this.requestLayout();
-	}
-
 	public onMeasure(widthMeasureSpec: number, heightMeasureSpec: number): void {
 		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 

@@ -448,17 +448,15 @@ export abstract class ViewBase extends Observable implements ViewBaseDefinition 
 
 	// Dynamic properties.
 	/**
-	 * Gets or sets the distance, in pixels, between the left edge of the child and the left edge of its parent.
+	 * Gets or sets the distance between the left edge of the child and the left edge of its parent.
 	 * @nsProperty
 	 */
-	left: CoreTypes.LengthType;
+	left: CoreTypes.PercentLengthType;
 	/**
-	 * Gets or sets the distance, in pixels, between the top edge of the child and the top edge of its parent.
+	 * Gets or sets the distance between the top edge of the child and the top edge of its parent.
 	 * @nsProperty
 	 */
-	top: CoreTypes.LengthType;
-	effectiveLeft: number;
-	effectiveTop: number;
+	top: CoreTypes.PercentLengthType;
 	/**
 	 * Dock position of the view within its parent.
 	 * @nsProperty
@@ -542,6 +540,8 @@ export abstract class ViewBase extends Observable implements ViewBaseDefinition 
 	public effectiveBorderRightWidth: number;
 	public effectiveBorderBottomWidth: number;
 	public effectiveBorderLeftWidth: number;
+	public effectiveLeft: number;
+	public effectiveTop: number;
 
 	public _defaultPaddingTop: number;
 	public _defaultPaddingRight: number;

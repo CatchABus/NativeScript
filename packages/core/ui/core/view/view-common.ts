@@ -1191,12 +1191,14 @@ export abstract class ViewCommon extends ViewBase implements ViewDefinition {
 		this.effectiveWidth = PercentLength.toDevicePixels(style.width, -2, availableWidth);
 		this.effectiveMarginLeft = PercentLength.toDevicePixels(style.marginLeft, 0, availableWidth);
 		this.effectiveMarginRight = PercentLength.toDevicePixels(style.marginRight, 0, availableWidth);
+		this.effectiveLeft = PercentLength.toDevicePixels(this.left, 0, availableWidth);
 
 		const availableHeight = parentHeightMeasureMode === layout.UNSPECIFIED ? -1 : parentHeightMeasureSize;
 
 		this.effectiveHeight = PercentLength.toDevicePixels(style.height, -2, availableHeight);
 		this.effectiveMarginTop = PercentLength.toDevicePixels(style.marginTop, 0, availableHeight);
 		this.effectiveMarginBottom = PercentLength.toDevicePixels(style.marginBottom, 0, availableHeight);
+		this.effectiveTop = PercentLength.toDevicePixels(this.top, 0, availableHeight);
 	}
 
 	public _setNativeClipToBounds() {
