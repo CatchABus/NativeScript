@@ -26,8 +26,8 @@
 		"cli-highlight": "^2.0.0",
 		"commander": "^14.0.0",
 		"copy-webpack-plugin": "^13.0.0",
-		"css": "^3.0.0",
 		"css-loader": "^7.0.0",
+		"css-tree": "^3.1.0",
 		"dotenv-webpack": "^8.0.0",
 		"fork-ts-checker-webpack-plugin": "^9.0.0",
 		"loader-utils": "^2.0.0 || ^3.0.0",
@@ -55,9 +55,8 @@
 		"webpack-virtual-modules": "^0.4.0"
 	},
 	"devDependencies": {
-		"@angular/compiler-cli": "^20.0.0",
 		"@angular-devkit/build-angular": "^20.0.0",
-		"@types/css": "0.0.38",
+		"@angular/compiler-cli": "^20.0.0",
 		"@types/jest": "29.5.4",
 		"@types/loader-utils": "2.0.6",
 		"@types/lodash.get": "4.4.9",
