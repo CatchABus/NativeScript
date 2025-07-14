@@ -1,4 +1,10 @@
-import { parse, Import, Stylesheet } from 'css';
+import {
+	Atrule,
+	StyleSheet as CssTreeStyleSheet,
+	parse,
+	toPlainObject,
+	walk,
+} from 'css-tree';
 import { urlToRequest } from 'loader-utils';
 import { dedent } from 'ts-dedent';
 
@@ -11,18 +17,21 @@ export default function loader(content: string, map: any) {
 	const inline = !!options.useForImports;
 	const requirePrefix = inline ? inlineLoader : '';
 
-	const ast = parse(content);
-
+	const stylesheet = parse(content, {
+		context: 'stylesheet',
+		parseAtrulePrelude: false,
+		parseValue: false,
+	}) as CssTreeStyleSheet;
+	const importRules = spliceImportRules(stylesheet);
 	// todo: revise if this is necessary
 	// todo: perhaps use postCSS and just build imports into a single file?
-	let dependencies = [];
-	getAndRemoveImportRules(ast)
-		.map(extractUrlFromRule)
-		.map(createRequireUri)
-		.forEach(({ uri, requireURI }) => {
-			dependencies.push(`require("${requirePrefix}${requireURI}")`);
-		});
+	const dependencies: string[] = [];
 
+	for (const rule of importRules) {
+		dependencies.push(createRequireCall(rule, requirePrefix));
+	}
+
+	const ast = toPlainObject(stylesheet);
 	const str = JSON.stringify(ast, (k, v) => (k === 'position' ? undefined : v));
 
 	// map.mappings = map.mappings.replace(/;{2,}/, '')
@@ -36,36 +45,37 @@ export default function loader(content: string, map: any) {
 	this.callback(
 		null,
 		code, //`${dependencies.join('\n')}module.exports = ${str};`,
-		map
+		map,
 	);
 }
 
-function getImportRules(ast: Stylesheet): Import[] {
-	if (!ast || (<any>ast).type !== 'stylesheet' || !ast.stylesheet) {
-		return [];
+function spliceImportRules(ast: CssTreeStyleSheet): Atrule[] {
+	const rules: Atrule[] = [];
+
+	if (!ast || ast.type !== 'StyleSheet' || !ast.children) {
+		return rules;
 	}
-	return <Import[]>(
-		ast.stylesheet.rules.filter(
-			(rule) => rule.type === 'import' && (<any>rule).import
-		)
-	);
-}
 
-function getAndRemoveImportRules(ast: Stylesheet): Import[] {
-	const imports = getImportRules(ast);
-	ast.stylesheet.rules = ast.stylesheet.rules.filter(
-		(rule) => rule.type !== 'import'
-	);
+	walk(ast, function (node, item, list) {
+		if (node.type === 'Atrule' && node.name === 'import') {
+			rules.push(node);
+			list.remove(item);
+		}
+		return this.skip;
+	});
 
-	return imports;
+	return rules;
 }
 
 /**
  * Extracts the url from import rule (ex. `url("./platform.css")`)
  */
-function extractUrlFromRule(importRule: Import): string {
-	const urlValue = importRule.import;
+function extractUrlFromRule(rule: Atrule): string {
+	if (rule.prelude.type !== 'Raw') {
+		throw new Error('Failed to extract url from css import rule');
+	}
 
+	const urlValue = rule.prelude.value;
 	const unpackedUrlMatch = urlValue.match(unpackUrlPattern);
 	const unpackedValue = unpackedUrlMatch ? unpackedUrlMatch[1] : urlValue;
 
@@ -73,9 +83,7 @@ function extractUrlFromRule(importRule: Import): string {
 	return quotesMatch ? quotesMatch[2] : unpackedValue;
 }
 
-function createRequireUri(uri): { uri: string; requireURI: string } {
-	return {
-		uri: uri,
-		requireURI: urlToRequest(uri),
-	};
+function createRequireCall(rule: Atrule, prefix: string): string {
+	const url = extractUrlFromRule(rule);
+	return `require("${prefix}${urlToRequest(url)}")`;
 }
