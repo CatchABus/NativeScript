@@ -1,10 +1,4 @@
-import {
-	Atrule,
-	StyleSheet as CssTreeStyleSheet,
-	parse,
-	toPlainObject,
-	walk,
-} from 'css-tree';
+import { Atrule, StyleSheet as CssTreeStyleSheet, parse } from 'css-tree';
 import { urlToRequest } from 'loader-utils';
 import { dedent } from 'ts-dedent';
 
@@ -17,12 +11,13 @@ export default function loader(content: string, map: any) {
 	const inline = !!options.useForImports;
 	const requirePrefix = inline ? inlineLoader : '';
 
-	const stylesheet = parse(content, {
+	const ast = parse(content, {
 		context: 'stylesheet',
 		parseAtrulePrelude: false,
 		parseValue: false,
+		positions: false,
 	}) as CssTreeStyleSheet;
-	const importRules = spliceImportRules(stylesheet);
+	const importRules = spliceImportRules(ast);
 	// todo: revise if this is necessary
 	// todo: perhaps use postCSS and just build imports into a single file?
 	const dependencies: string[] = [];
@@ -31,8 +26,8 @@ export default function loader(content: string, map: any) {
 		dependencies.push(createRequireCall(rule, requirePrefix));
 	}
 
-	const ast = toPlainObject(stylesheet);
-	const str = JSON.stringify(ast, (k, v) => (k === 'position' ? undefined : v));
+	// Note: JSON encoding will also convert css-tree Linked lists to regular arrays since they implement toJSON method
+	const str = JSON.stringify(ast);
 
 	// map.mappings = map.mappings.replace(/;{2,}/, '')
 
@@ -56,12 +51,11 @@ function spliceImportRules(ast: CssTreeStyleSheet): Atrule[] {
 		return rules;
 	}
 
-	walk(ast, function (node, item, list) {
+	ast.children.forEach((node, item, list) => {
 		if (node.type === 'Atrule' && node.name === 'import') {
 			rules.push(node);
 			list.remove(item);
 		}
-		return this.skip;
 	});
 
 	return rules;
