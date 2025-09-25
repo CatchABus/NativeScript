@@ -255,7 +255,7 @@ export class TextBase extends TextBaseCommon {
 		this._setNativeText();
 	}
 	createFormattedTextNative(value: FormattedString) {
-		return createSpannableStringBuilder(value, this.style.fontSize);
+		return this._createSpannableStringBuilder(value);
 	}
 	[formattedTextProperty.setNative](value: FormattedString) {
 		const nativeView = this.nativeTextViewProtected;
@@ -539,6 +539,87 @@ export class TextBase extends TextBaseCommon {
 			}
 		}
 	}
+
+	private _createSpannableStringBuilder(formattedString: FormattedString): android.text.SpannableStringBuilder {
+		if (!formattedString || !formattedString.parent) {
+			return null;
+		}
+
+		const ssb = new android.text.SpannableStringBuilder();
+		for (let i = 0, spanStart = 0, spanLength = 0, length = formattedString.spans.length; i < length; i++) {
+			const span = formattedString.spans.getItem(i);
+			const text = span.text;
+			const textTransform = (<TextBase>formattedString.parent).textTransform;
+			let spanText = text === null || text === undefined ? '' : text.toString();
+			if (textTransform && textTransform !== 'none') {
+				spanText = getTransformedText(spanText, textTransform);
+			}
+
+			spanLength = spanText.length;
+			if (spanLength > 0) {
+				ssb.insert(spanStart, spanText);
+				this._setSpanModifiers(ssb, span, spanStart, spanStart + spanLength);
+				spanStart += spanLength;
+			}
+		}
+
+		return ssb;
+	}
+
+	private _setSpanModifiers(ssb: android.text.SpannableStringBuilder, span: Span, start: number, end: number): void {
+		const spanStyle = span.style;
+		const align = spanStyle.verticalAlignment;
+
+		const font = new Font(spanStyle.fontFamily, spanStyle.fontSize, spanStyle.fontStyle, spanStyle.fontWeight, spanStyle.fontScaleInternal, spanStyle.fontVariationSettings);
+		const typefaceSpan = new org.nativescript.widgets.CustomTypefaceSpan(font.getAndroidTypeface());
+		ssb.setSpan(typefaceSpan, start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+		if (spanStyle.fontSize) {
+			ssb.setSpan(org.nativescript.widgets.Utils.createFontSizeSpan(this._context, spanStyle.fontSize), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+
+		const color = spanStyle.color;
+		if (color) {
+			ssb.setSpan(new android.text.style.ForegroundColorSpan(color.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+
+		// Use span or formatted string color
+		const backgroundColor = spanStyle.backgroundColor || span.parent.backgroundColor;
+		if (backgroundColor) {
+			ssb.setSpan(new android.text.style.BackgroundColorSpan(backgroundColor.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+
+		const textDecoration: CoreTypes.TextDecorationType = getClosestPropertyValue(textDecorationProperty, span);
+
+		if (textDecoration) {
+			const underline = textDecoration.indexOf('underline') !== -1;
+			if (underline) {
+				ssb.setSpan(new android.text.style.UnderlineSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+			}
+
+			const strikethrough = textDecoration.indexOf('line-through') !== -1;
+			if (strikethrough) {
+				ssb.setSpan(new android.text.style.StrikethroughSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+			}
+		}
+
+		if (align) {
+			initializeBaselineAdjustedSpan();
+			ssb.setSpan(new BaselineAdjustedSpan(layout.toDevicePixels(this.style.fontSize), align), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+
+		const tappable = span.tappable;
+		if (tappable) {
+			initializeClickableSpan();
+			ssb.setSpan(new ClickableSpan(span), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+		}
+
+		// TODO: Implement letterSpacing for Span here.
+		// const letterSpacing = formattedString.parent.style.letterSpacing;
+		// if (letterSpacing > 0) {
+		//     ssb.setSpan(new android.text.style.ScaleXSpan((letterSpacing + 1) / 10), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		// }
+	}
 }
 
 function getCapitalizedString(str: string): string {
@@ -577,85 +658,4 @@ function isStringTappable(formattedString: FormattedString) {
 	}
 
 	return false;
-}
-
-function createSpannableStringBuilder(formattedString: FormattedString, defaultFontSize: number): android.text.SpannableStringBuilder {
-	if (!formattedString || !formattedString.parent) {
-		return null;
-	}
-
-	const ssb = new android.text.SpannableStringBuilder();
-	for (let i = 0, spanStart = 0, spanLength = 0, length = formattedString.spans.length; i < length; i++) {
-		const span = formattedString.spans.getItem(i);
-		const text = span.text;
-		const textTransform = (<TextBase>formattedString.parent).textTransform;
-		let spanText = text === null || text === undefined ? '' : text.toString();
-		if (textTransform && textTransform !== 'none') {
-			spanText = getTransformedText(spanText, textTransform);
-		}
-
-		spanLength = spanText.length;
-		if (spanLength > 0) {
-			ssb.insert(spanStart, spanText);
-			setSpanModifiers(ssb, span, spanStart, spanStart + spanLength, defaultFontSize);
-			spanStart += spanLength;
-		}
-	}
-
-	return ssb;
-}
-
-function setSpanModifiers(ssb: android.text.SpannableStringBuilder, span: Span, start: number, end: number, defaultFontSize: number): void {
-	const spanStyle = span.style;
-	const align = spanStyle.verticalAlignment;
-
-	const font = new Font(spanStyle.fontFamily, spanStyle.fontSize, spanStyle.fontStyle, spanStyle.fontWeight, spanStyle.fontScaleInternal, spanStyle.fontVariationSettings);
-	const typefaceSpan = new org.nativescript.widgets.CustomTypefaceSpan(font.getAndroidTypeface());
-	ssb.setSpan(typefaceSpan, start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-	if (spanStyle.fontSize) {
-		ssb.setSpan(new android.text.style.AbsoluteSizeSpan(layout.toDevicePixels(spanStyle.fontSize)), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-	}
-
-	const color = spanStyle.color;
-	if (color) {
-		ssb.setSpan(new android.text.style.ForegroundColorSpan(color.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-	}
-
-	// Use span or formatted string color
-	const backgroundColor = spanStyle.backgroundColor || span.parent.backgroundColor;
-	if (backgroundColor) {
-		ssb.setSpan(new android.text.style.BackgroundColorSpan(backgroundColor.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-	}
-
-	const textDecoration: CoreTypes.TextDecorationType = getClosestPropertyValue(textDecorationProperty, span);
-
-	if (textDecoration) {
-		const underline = textDecoration.indexOf('underline') !== -1;
-		if (underline) {
-			ssb.setSpan(new android.text.style.UnderlineSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
-		const strikethrough = textDecoration.indexOf('line-through') !== -1;
-		if (strikethrough) {
-			ssb.setSpan(new android.text.style.StrikethroughSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-	}
-
-	if (align) {
-		initializeBaselineAdjustedSpan();
-		ssb.setSpan(new BaselineAdjustedSpan(layout.toDevicePixels(defaultFontSize), align), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-	}
-
-	const tappable = span.tappable;
-	if (tappable) {
-		initializeClickableSpan();
-		ssb.setSpan(new ClickableSpan(span), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-	}
-
-	// TODO: Implement letterSpacing for Span here.
-	// const letterSpacing = formattedString.parent.style.letterSpacing;
-	// if (letterSpacing > 0) {
-	//     ssb.setSpan(new android.text.style.ScaleXSpan((letterSpacing + 1) / 10), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-	// }
 }
