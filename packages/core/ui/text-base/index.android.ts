@@ -11,7 +11,7 @@ import { Span } from './span';
 import { CoreTypes } from '../../core-types';
 import { layout } from '../../utils';
 import { SDK_VERSION } from '../../utils/constants';
-import { isString, isNullOrUndefined } from '../../utils/types';
+import { isString, isNullOrUndefined, isNumber } from '../../utils/types';
 import { accessibilityIdentifierProperty } from '../../accessibility/accessibility-properties';
 import { testIDProperty } from '../core/view';
 import { isCssWideKeyword } from '../core/properties/property-shared';
@@ -32,23 +32,31 @@ function initializeTextTransformation(): void {
 	@NativeClass
 	@Interfaces([android.text.method.TransformationMethod])
 	class TextTransformationImpl extends java.lang.Object implements android.text.method.TransformationMethod {
-		constructor(public textBase: TextBase) {
+		private owner: WeakRef<TextBase>;
+
+		constructor(owner: TextBase) {
 			super();
+			this.owner = new WeakRef(owner);
 
 			return global.__native(this);
 		}
 
 		public getTransformation(charSeq: any, view: android.view.View): any {
+			const owner = this.owner?.get();
 			// NOTE: Do we need to transform the new text here?
-			const formattedText = this.textBase.formattedText;
+			const formattedText = owner.formattedText;
+			let result;
+
 			if (formattedText) {
-				return this.textBase.createFormattedTextNative(formattedText);
+				result = owner.createFormattedTextNative(formattedText);
 			} else {
-				const text = this.textBase.text;
+				const text = owner.text;
 				const stringValue = isNullOrUndefined(text) ? '' : text.toString();
 
-				return getTransformedText(stringValue, this.textBase.textTransform);
+				result = getTransformedText(stringValue, owner.textTransform);
 			}
+
+			return result;
 		}
 
 		public onFocusChanged(view: android.view.View, sourceText: string, focused: boolean, direction: number, previouslyFocusedRect: android.graphics.Rect): void {
@@ -57,113 +65,6 @@ function initializeTextTransformation(): void {
 	}
 
 	TextTransformation = TextTransformationImpl;
-}
-
-interface ClickableSpan {
-	new (owner: Span): android.text.style.ClickableSpan;
-}
-
-let ClickableSpan: ClickableSpan;
-
-function initializeClickableSpan(): void {
-	if (ClickableSpan) {
-		return;
-	}
-
-	@NativeClass
-	class ClickableSpanImpl extends android.text.style.ClickableSpan {
-		owner: WeakRef<Span>;
-
-		constructor(owner: Span) {
-			super();
-			this.owner = new WeakRef(owner);
-
-			return global.__native(this);
-		}
-		onClick(view: android.view.View): void {
-			const owner = this.owner?.get();
-			if (owner) {
-				owner._emit(Span.linkTapEvent);
-			}
-			view.clearFocus();
-			view.invalidate();
-		}
-		updateDrawState(tp: android.text.TextPaint): void {
-			// don't style as link
-		}
-	}
-
-	ClickableSpan = ClickableSpanImpl;
-}
-
-interface BaselineAdjustedSpan {
-	new (fontSize: number, align?: CoreTypes.VerticalAlignmentTextType): android.text.style.MetricAffectingSpan;
-}
-
-let BaselineAdjustedSpan: BaselineAdjustedSpan;
-
-function initializeBaselineAdjustedSpan(): void {
-	if (BaselineAdjustedSpan) {
-		return;
-	}
-	@NativeClass
-	class BaselineAdjustedSpanImpl extends android.text.style.MetricAffectingSpan {
-		fontSize: number;
-		align: CoreTypes.VerticalAlignmentTextType = 'baseline';
-
-		constructor(fontSize: number, align?: CoreTypes.VerticalAlignmentTextType) {
-			super();
-
-			this.align = align;
-			this.fontSize = fontSize;
-		}
-
-		updateDrawState(paint: android.text.TextPaint) {
-			this.updateState(paint);
-		}
-
-		updateMeasureState(paint: android.text.TextPaint) {
-			this.updateState(paint);
-		}
-
-		updateState(paint: android.text.TextPaint) {
-			const metrics = paint.getFontMetrics();
-
-			if (!this.align || ['baseline', 'stretch'].includes(this.align)) {
-				return;
-			}
-
-			if (this.align === 'top') {
-				return (paint.baselineShift = -this.fontSize - metrics.bottom - metrics.top);
-			}
-
-			if (this.align === 'bottom') {
-				return (paint.baselineShift = metrics.bottom);
-			}
-
-			if (this.align === 'text-top') {
-				return (paint.baselineShift = -this.fontSize - metrics.descent - metrics.ascent);
-			}
-
-			if (this.align === 'text-bottom') {
-				return (paint.baselineShift = metrics.bottom - metrics.descent);
-			}
-
-			if (this.align === 'middle') {
-				return (paint.baselineShift = (metrics.descent - metrics.ascent) / 2 - metrics.descent);
-			}
-
-			if (this.align === 'sup') {
-				return (paint.baselineShift = -this.fontSize * 0.4);
-			}
-
-			if (this.align === 'sub') {
-				return (paint.baselineShift = (metrics.descent - metrics.ascent) * 0.4);
-			}
-		}
-	}
-
-	BaselineAdjustedSpan = BaselineAdjustedSpanImpl;
 }
 
 export class TextBase extends TextBaseCommon {
@@ -400,24 +301,25 @@ export class TextBase extends TextBaseCommon {
 	}
 
 	[textDecorationProperty.setNative](value: number | CoreTypes.TextDecorationType) {
-		switch (value) {
-			case 'underline':
-				this.nativeTextViewProtected.setPaintFlags(android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-				break;
-			case 'line-through':
-				this.nativeTextViewProtected.setPaintFlags(android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-				break;
-			case 'underline line-through':
-				this.nativeTextViewProtected.setPaintFlags(android.graphics.Paint.UNDERLINE_TEXT_FLAG | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-				break;
-			default:
-				if (value === 'none' || isCssWideKeyword(value)) {
-					this.nativeTextViewProtected.setPaintFlags(0);
-				} else {
-					this.nativeTextViewProtected.setPaintFlags(value as number);
-				}
-				break;
+		let paintFlags: number;
+
+		if (isString(value)) {
+			paintFlags = 0;
+
+			if (value.indexOf('underline') > -1) {
+				paintFlags |= android.graphics.Paint.UNDERLINE_TEXT_FLAG;
+			}
+
+			if (value.indexOf('line-through') > -1) {
+				paintFlags |= android.graphics.Paint.STRIKE_THRU_TEXT_FLAG;
+			}
+		} else if (isNumber(value)) {
+			paintFlags = value;
+		} else {
+			paintFlags = 0;
 		}
+
+		this.nativeTextViewProtected.setPaintFlags(paintFlags);
 	}
 
 	[textShadowProperty.getDefault]() {
@@ -567,58 +469,31 @@ export class TextBase extends TextBaseCommon {
 	}
 
 	private _setSpanModifiers(ssb: android.text.SpannableStringBuilder, span: Span, start: number, end: number): void {
+		// Use a weak reference of span for cases like click listener
+		const spanRef = new WeakRef(span);
 		const spanStyle = span.style;
-		const align = spanStyle.verticalAlignment;
 
 		const font = new Font(spanStyle.fontFamily, spanStyle.fontSize, spanStyle.fontStyle, spanStyle.fontWeight, spanStyle.fontScaleInternal, spanStyle.fontVariationSettings);
-		const typefaceSpan = new org.nativescript.widgets.CustomTypefaceSpan(font.getAndroidTypeface());
-		ssb.setSpan(typefaceSpan, start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-		if (spanStyle.fontSize) {
-			ssb.setSpan(org.nativescript.widgets.Utils.createFontSizeSpan(this._context, spanStyle.fontSize), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
-		const color = spanStyle.color;
-		if (color) {
-			ssb.setSpan(new android.text.style.ForegroundColorSpan(color.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
-		// Use span or formatted string color
-		const backgroundColor = spanStyle.backgroundColor || span.parent.backgroundColor;
-		if (backgroundColor) {
-			ssb.setSpan(new android.text.style.BackgroundColorSpan(backgroundColor.android), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
+		const typeface = font.getAndroidTypeface() as android.graphics.Typeface;
+		const textSizeSp = spanStyle.fontSize && spanStyle.fontSize !== 0 ? spanStyle.fontSize : -1;
+		const baseTextSizeSp = this.style.fontSize && this.style.fontSize !== 0 ? this.style.fontSize : -1;
+		const colorInt = spanStyle.color ? spanStyle.color.android : 0;
+		const backgroundColor = spanStyle.backgroundColor || span.parent.backgroundColor; // Use span or formatted string color
+		const backgroundColorInt = backgroundColor ? backgroundColor.android : 0;
 		const textDecoration: CoreTypes.TextDecorationType = getClosestPropertyValue(textDecorationProperty, span);
+		const vAlignment = spanStyle.verticalAlignment;
+		const clickListener = span.tappable
+			? new org.nativescript.widgets.text.CustomClickableSpan.ClickListener({
+					onClick(_nativeView) {
+						const view = spanRef?.get();
+						if (view) {
+							view._emit(Span.linkTapEvent);
+						}
+					},
+				})
+			: null;
 
-		if (textDecoration) {
-			const underline = textDecoration.indexOf('underline') !== -1;
-			if (underline) {
-				ssb.setSpan(new android.text.style.UnderlineSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-			}
-
-			const strikethrough = textDecoration.indexOf('line-through') !== -1;
-			if (strikethrough) {
-				ssb.setSpan(new android.text.style.StrikethroughSpan(), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-			}
-		}
-
-		if (align) {
-			initializeBaselineAdjustedSpan();
-			ssb.setSpan(new BaselineAdjustedSpan(layout.toDevicePixels(this.style.fontSize), align), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
-		const tappable = span.tappable;
-		if (tappable) {
-			initializeClickableSpan();
-			ssb.setSpan(new ClickableSpan(span), start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-		}
-
-		// TODO: Implement letterSpacing for Span here.
-		// const letterSpacing = formattedString.parent.style.letterSpacing;
-		// if (letterSpacing > 0) {
-		//     ssb.setSpan(new android.text.style.ScaleXSpan((letterSpacing + 1) / 10), start, end, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-		// }
+		org.nativescript.widgets.text.TextUtils.applySpanModifiers(this._context, ssb, start, end, typeface, textSizeSp, baseTextSizeSp, colorInt, backgroundColorInt, textDecoration, vAlignment, clickListener);
 	}
 }
 

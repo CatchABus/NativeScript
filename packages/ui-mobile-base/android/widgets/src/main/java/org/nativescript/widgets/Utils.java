@@ -16,11 +16,9 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.ParcelFileDescriptor;
-import android.text.style.AbsoluteSizeSpan;
 import android.util.Base64OutputStream;
 import android.util.Log;
 import android.util.Pair;
-import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -514,11 +512,6 @@ public class Utils {
 				});
 			}
 		});
-	}
-
-	public static AbsoluteSizeSpan createFontSizeSpan(final Context context, float dipSize) {
-		return new AbsoluteSizeSpan(
-			(int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, dipSize, context.getResources().getDisplayMetrics()));
 	}
 
 	/**

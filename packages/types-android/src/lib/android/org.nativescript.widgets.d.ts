@@ -1,11 +1,11 @@
 ﻿declare module org {
     module nativescript {
         module widgets {
-						export class BoxShadowDrawable {
-								public constructor(drawable: android.graphics.drawable.Drawable, value: string);
-								public getWrappedDrawable(): android.graphics.drawable.Drawable;
-								public toString(): string;
-						}
+            export class BoxShadowDrawable {
+                    public constructor(drawable: android.graphics.drawable.Drawable, value: string);
+                    public getWrappedDrawable(): android.graphics.drawable.Drawable;
+                    public toString(): string;
+            }
 
             export class CustomTransition extends androidx.transition.Visibility {
                 constructor(animatorSet: android.animation.AnimatorSet, transitionName: string);
@@ -655,8 +655,37 @@
                 constructor(color: number, thickness: number);
             }
 
-            export class CustomTypefaceSpan extends android.text.style.TypefaceSpan {
-                constructor(typeface: android.graphics.Typeface);
+            module text {
+                export class BaselineAdjustedSpan extends android.text.style.MetricAffectingSpan {
+                    constructor(verticalAlignment: string, textSize: number);
+                }
+
+                export module CustomClickableSpan {
+                    export class ClickListener {
+                        constructor(implementation: IClickListener);
+                        onClick(view: android.view.View): void;
+                    }
+
+                    export interface IClickListener {
+                        onClick(view: android.view.View): void;
+                    }
+                }
+
+                export class CustomClickableSpan extends android.text.style.ClickableSpan {
+                    constructor(clickListener: CustomClickableSpan.ClickListener);
+                }
+
+                export class CustomTypefaceSpan extends android.text.style.TypefaceSpan {
+                    constructor(typeface: android.graphics.Typeface);
+                }
+
+                export class TextUtils {
+                    public static BASELINE_ADJUSTED_SPAN: number;
+                    public static CUSTOM_TYPEFACE_SPAN: number;
+
+                    public static applySpanModifiers(context: android.content.Context, ssb: android.text.SpannableStringBuilder, start: number, end: number, typeface: android.graphics.Typeface, 
+                        textSizeSp: number, baseTextSizeSp: number, textColor: number, backgroundColor: number, textDecoration: string, verticalAlignment: string, clickListener: CustomClickableSpan.ClickListener): void;
+                }
             }
         }
     }
@@ -731,7 +760,6 @@ declare module org {
                 public static saveToFileAsync(param0: globalAndroid.graphics.Bitmap, param1: string, param2: string, param3: number, param4: org.nativescript.widgets.Utils.AsyncImageCallback): void;
                 public static toBase64StringAsync(param0: globalAndroid.graphics.Bitmap, param1: string, param2: number, param3: org.nativescript.widgets.Utils.AsyncImageCallback): void;
                 public static resizeAsync(param0: globalAndroid.graphics.Bitmap, param1: number, param2: string, param3: org.nativescript.widgets.Utils.AsyncImageCallback): void;
-                public static createFontSizeSpan(param0: globalAndroid.content.Context, param1: number): globalAndroid.text.style.AbsoluteSizeSpan;
 				public constructor();
 			}
 			export module Utils {

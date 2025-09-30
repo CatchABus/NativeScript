@@ -1,4 +1,4 @@
-package org.nativescript.widgets;
+package org.nativescript.widgets.text;
 
 import android.annotation.SuppressLint;
 import android.graphics.Typeface;
@@ -23,6 +23,11 @@ public class CustomTypefaceSpan extends TypefaceSpan {
 
 	public void updateMeasureState(TextPaint paint) {
 		this.applyCustomTypeFace(paint);
+	}
+
+	@Override
+	public int getSpanTypeId() {
+		return TextUtils.CUSTOM_TYPEFACE_SPAN;
 	}
 
 	private void applyCustomTypeFace(TextPaint paint) {
