@@ -475,8 +475,8 @@ export class TextBase extends TextBaseCommon {
 
 		const font = new Font(spanStyle.fontFamily, spanStyle.fontSize, spanStyle.fontStyle, spanStyle.fontWeight, spanStyle.fontScaleInternal, spanStyle.fontVariationSettings);
 		const typeface = font.getAndroidTypeface() as android.graphics.Typeface;
-		const textSizeSp = spanStyle.fontSize && spanStyle.fontSize !== 0 ? spanStyle.fontSize : -1;
-		const baseTextSizeSp = this.style.fontSize && this.style.fontSize !== 0 ? this.style.fontSize : -1;
+		const textSizeSp = spanStyle.fontSize || spanStyle.fontSize === 0 ? spanStyle.fontSize : -1;
+		const baseTextSize = this.nativeTextViewProtected.getTextSize();
 		const colorInt = spanStyle.color ? spanStyle.color.android : 0;
 		const backgroundColor = spanStyle.backgroundColor || span.parent.backgroundColor; // Use span or formatted string color
 		const backgroundColorInt = backgroundColor ? backgroundColor.android : 0;
@@ -493,7 +493,7 @@ export class TextBase extends TextBaseCommon {
 				})
 			: null;
 
-		org.nativescript.widgets.text.TextUtils.applySpanModifiers(this._context, ssb, start, end, typeface, textSizeSp, baseTextSizeSp, colorInt, backgroundColorInt, textDecoration, vAlignment, clickListener);
+		org.nativescript.widgets.text.TextUtils.applySpanModifiers(this._context, ssb, start, end, typeface, textSizeSp, baseTextSize, colorInt, backgroundColorInt, textDecoration, vAlignment, clickListener);
 	}
 }
 

@@ -15,7 +15,7 @@ public class TextUtils {
 	public static final int BASELINE_ADJUSTED_SPAN = 10001;
 	public static final int CUSTOM_TYPEFACE_SPAN = 10002;
 
-	public static void applySpanModifiers(Context context, SpannableStringBuilder ssb, int start, int end, Typeface typeface, int textSizeSp, int baseTextSizeSp, int textColor,
+	public static void applySpanModifiers(Context context, SpannableStringBuilder ssb, int start, int end, Typeface typeface, int textSizeSp, int baseTextSize, int textColor,
 																				int backgroundColor, String textDecoration, String verticalAlignment, CustomClickableSpan.ClickListener clickListener) {
 		if (context == null) {
 			return;
@@ -47,8 +47,7 @@ public class TextUtils {
 		}
 
 		if (verticalAlignment != null && !verticalAlignment.isEmpty()) {
-			int pxSize = (int)TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, baseTextSizeSp, context.getResources().getDisplayMetrics());
-			ssb.setSpan(new BaselineAdjustedSpan(verticalAlignment, pxSize), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+			ssb.setSpan(new BaselineAdjustedSpan(verticalAlignment, baseTextSize), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 		}
 
 		if (clickListener != null) {

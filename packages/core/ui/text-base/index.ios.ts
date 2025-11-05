@@ -148,27 +148,6 @@ export class TextBase extends TextBaseCommon {
 		this._tapGestureRecognizer = null;
 	}
 
-	_setTappableState(tappable: boolean) {
-		if (this._tappable !== tappable) {
-			const nativeTextView = this.nativeTextViewProtected;
-
-			this._tappable = tappable;
-			if (this._tappable) {
-				const tapHandler = UILabelClickHandlerImpl.initWithOwner(new WeakRef(this));
-				// Associate handler with menuItem or it will get collected by JSC
-				this._linkTapHandler = tapHandler;
-
-				this._tapGestureRecognizer = UITapGestureRecognizer.alloc().initWithTargetAction(this._linkTapHandler, 'linkTap');
-				nativeTextView.addGestureRecognizer(this._tapGestureRecognizer);
-			} else {
-				nativeTextView.removeGestureRecognizer(this._tapGestureRecognizer);
-
-				this._linkTapHandler = null;
-				this._tapGestureRecognizer = null;
-			}
-		}
-	}
-
 	[textProperty.getDefault](): number | symbol {
 		return resetSymbol;
 	}
@@ -217,31 +196,19 @@ export class TextBase extends TextBaseCommon {
 	}
 
 	[fontScaleInternalProperty.setNative](value: number) {
-		const nativeView = this.nativeTextViewProtected instanceof UIButton ? this.nativeTextViewProtected.titleLabel : this.nativeTextViewProtected;
-		const font = this.style.fontInternal || Font.default.withFontSize(nativeView.font.pointSize);
-		const finalValue = adjustMinMaxFontScale(value, this);
-
-		// Request layout on font scale as it's not done automatically
-		if (font.fontScale !== finalValue) {
-			this.style.fontInternal = font.withFontScale(finalValue);
-			this.requestLayout();
-		} else {
-			if (!this.style.fontInternal) {
-				this.style.fontInternal = font;
-			}
-		}
+		this._scaleFont(value);
 	}
 
 	[iosAccessibilityAdjustsFontSizeProperty.setNative](value: boolean) {
-		this[fontScaleInternalProperty.setNative](this.style.fontScaleInternal);
+		this._scaleFont(this.style.fontScaleInternal);
 	}
 
 	[iosAccessibilityMinFontScaleProperty.setNative](value: number) {
-		this[fontScaleInternalProperty.setNative](this.style.fontScaleInternal);
+		this._scaleFont(this.style.fontScaleInternal);
 	}
 
 	[iosAccessibilityMaxFontScaleProperty.setNative](value: number) {
-		this[fontScaleInternalProperty.setNative](this.style.fontScaleInternal);
+		this._scaleFont(this.style.fontScaleInternal);
 	}
 
 	[textAlignmentProperty.setNative](value: CoreTypes.TextAlignmentType) {
@@ -320,6 +287,43 @@ export class TextBase extends TextBaseCommon {
 			fn();
 		} else {
 			UIView.performWithoutAnimation(fn);
+		}
+	}
+
+	_setTappableState(tappable: boolean) {
+		if (this._tappable !== tappable) {
+			const nativeTextView = this.nativeTextViewProtected;
+
+			this._tappable = tappable;
+			if (this._tappable) {
+				const tapHandler = UILabelClickHandlerImpl.initWithOwner(new WeakRef(this));
+				// Associate handler with menuItem or it will get collected by JSC
+				this._linkTapHandler = tapHandler;
+
+				this._tapGestureRecognizer = UITapGestureRecognizer.alloc().initWithTargetAction(this._linkTapHandler, 'linkTap');
+				nativeTextView.addGestureRecognizer(this._tapGestureRecognizer);
+			} else {
+				nativeTextView.removeGestureRecognizer(this._tapGestureRecognizer);
+
+				this._linkTapHandler = null;
+				this._tapGestureRecognizer = null;
+			}
+		}
+	}
+
+	_scaleFont(value: number): void {
+		const nativeView = this.nativeTextViewProtected instanceof UIButton ? this.nativeTextViewProtected.titleLabel : this.nativeTextViewProtected;
+		const font = this.style.fontInternal || Font.default.withFontSize(nativeView.font.pointSize);
+		const finalValue = adjustMinMaxFontScale(value, this);
+
+		// Request layout on font scale as it's not done automatically
+		if (font.fontScale !== finalValue) {
+			this.style.fontInternal = font.withFontScale(finalValue);
+			this.requestLayout();
+		} else {
+			if (!this.style.fontInternal) {
+				this.style.fontInternal = font;
+			}
 		}
 	}
 
@@ -402,7 +406,7 @@ export class TextBase extends TextBaseCommon {
 			color: span.color ? span.color.ios : null,
 			backgroundColor: backgroundColor ? backgroundColor.ios : null,
 			textDecoration: getClosestPropertyValue(textDecorationProperty, span),
-			baselineOffset: this.getBaselineOffset(iosFont, span.style.verticalAlignment),
+			baselineOffset: getBaselineOffset(iosFont, span.style.verticalAlignment),
 			index,
 		};
 	}
@@ -410,40 +414,6 @@ export class TextBase extends TextBaseCommon {
 	createMutableStringForSpan(span: Span, text: string): NSMutableAttributedString {
 		const details = this.createMutableStringDetails(span, text);
 		return NativeScriptUtils.createMutableStringForSpanFontColorBackgroundColorTextDecorationBaselineOffset(details.text, details.iosFont, details.color, details.backgroundColor, details.textDecoration, details.baselineOffset);
-	}
-
-	getBaselineOffset(font: UIFont, align?: CoreTypes.VerticalAlignmentTextType): number {
-		if (!align || ['stretch', 'baseline'].includes(align)) {
-			return 0;
-		}
-
-		if (align === 'top') {
-			return -this.fontSize - font.descender - font.ascender - font.leading / 2;
-		}
-
-		if (align === 'bottom') {
-			return font.descender + font.leading / 2;
-		}
-
-		if (align === 'text-top') {
-			return -this.fontSize - font.descender - font.ascender;
-		}
-
-		if (align === 'text-bottom') {
-			return font.descender;
-		}
-
-		if (align === 'middle') {
-			return (font.descender - font.ascender) / 2 - font.descender;
-		}
-
-		if (align === 'sup') {
-			return -this.fontSize * 0.4;
-		}
-
-		if (align === 'sub') {
-			return (font.descender - font.ascender) * 0.4;
-		}
 	}
 
 	_setShadow(value: ShadowCSSValues): void {
@@ -479,25 +449,69 @@ export class TextBase extends TextBaseCommon {
 	}
 }
 
-export function getTransformedText(text: string, textTransform: CoreTypes.TextTransformType): string {
-	if (!text || !isString(text)) {
+export function getTransformedText(text: NSAttributedString | string, textTransform: CoreTypes.TextTransformType): string {
+	if (!text) {
 		return '';
 	}
 
+	const textContent = text instanceof NSAttributedString ? text.string : text;
+
+	if (!textContent || !isString(textContent)) {
+		return '';
+	}
+
+	let result: string;
+
 	switch (textTransform) {
 		case 'uppercase':
-			return NSStringFromNSAttributedString(text).uppercaseString;
+			result = NSString.stringWithString(textContent).uppercaseString;
+			break;
 		case 'lowercase':
-			return NSStringFromNSAttributedString(text).lowercaseString;
+			result = NSString.stringWithString(textContent).lowercaseString;
+			break;
 		case 'capitalize':
-			return NSStringFromNSAttributedString(text).capitalizedString;
+			result = NSString.stringWithString(textContent).capitalizedString;
+			break;
 		default:
-			return text;
+			result = textContent;
+			break;
 	}
+
+	return result;
 }
 
-function NSStringFromNSAttributedString(source: NSAttributedString | string): NSString {
-	return NSString.stringWithString((source instanceof NSAttributedString && source.string) || <string>source);
+function getBaselineOffset(font: UIFont, align?: CoreTypes.VerticalAlignmentTextType): number {
+	if (!align || ['stretch', 'baseline'].includes(align)) {
+		return 0;
+	}
+
+	if (align === 'top') {
+		return -font.pointSize - font.descender - font.ascender - font.leading / 2;
+	}
+
+	if (align === 'bottom') {
+		return font.descender + font.leading / 2;
+	}
+
+	if (align === 'text-top') {
+		return -font.pointSize - font.descender - font.ascender;
+	}
+
+	if (align === 'text-bottom') {
+		return font.descender;
+	}
+
+	if (align === 'middle') {
+		return (font.descender - font.ascender) / 2 - font.descender;
+	}
+
+	if (align === 'sup') {
+		return -font.pointSize * 0.4;
+	}
+
+	if (align === 'sub') {
+		return (font.descender - font.ascender) * 0.4;
+	}
 }
 
 function isStringTappable(formattedString: FormattedString) {
@@ -514,8 +528,9 @@ function isStringTappable(formattedString: FormattedString) {
 	return false;
 }
 
-function adjustMinMaxFontScale(value: number, view: TextBase | Span) {
-	let finalValue;
+function adjustMinMaxFontScale(value: number, view: TextBase | Span): number {
+	let finalValue: number;
+
 	if (view.iosAccessibilityAdjustsFontSize) {
 		finalValue = value;
 

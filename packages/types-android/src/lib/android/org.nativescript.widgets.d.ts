@@ -684,7 +684,7 @@
                     public static CUSTOM_TYPEFACE_SPAN: number;
 
                     public static applySpanModifiers(context: android.content.Context, ssb: android.text.SpannableStringBuilder, start: number, end: number, typeface: android.graphics.Typeface, 
-                        textSizeSp: number, baseTextSizeSp: number, textColor: number, backgroundColor: number, textDecoration: string, verticalAlignment: string, clickListener: CustomClickableSpan.ClickListener): void;
+                        textSizeSp: number, baseTextSize: number, textColor: number, backgroundColor: number, textDecoration: string, verticalAlignment: string, clickListener: CustomClickableSpan.ClickListener): void;
                 }
             }
         }
