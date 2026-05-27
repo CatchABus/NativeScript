@@ -3,7 +3,6 @@ import { ViewBase } from '../core/view-base';
 import { View } from '../core/view';
 import { _evaluateCssVariableExpression, _evaluateCssCalcExpression, isCssVariable, isCssVariableExpression, isCssCalcExpression } from '../core/properties';
 import { unsetValue } from '../core/properties/property-shared';
-import * as ReworkCSS from '../../css';
 
 import { RuleSet, StyleSheetSelectorScope, SelectorCore, SelectorsMatch, ChangeMap, fromAstNode, Node, MEDIA_QUERY_SEPARATOR, matchMediaQueryString } from './css-selector';
 import { Trace } from './styling-shared';
@@ -21,23 +20,6 @@ import { cssTreeParse } from '../../css/css-tree-parser';
 import { CSS3Parser } from '../../css/CSS3Parser';
 import { CSSNativeScript } from '../../css/CSSNativeScript';
 import { parse as parseCss } from '../../css/lib/parse';
-// @ts-ignore apps resolve this at runtime with path alias in project bundlers
-import appConfig from '~/package.json';
-
-let parser: 'rework' | 'nativescript' | 'css-tree' = 'css-tree';
-try {
-	if (appConfig) {
-		if (appConfig.cssParser === 'rework') {
-			parser = 'rework';
-		} else if (appConfig.cssParser === 'nativescript') {
-			parser = 'nativescript';
-		}
-	}
-} catch (e) {
-	//
-}
-
-type KeyframesMap = Map<string, Keyframes[]>;
 
 let mergedApplicationCssSelectors: RuleSet[] = [];
 let applicationCssSelectors: RuleSet[] = [];
@@ -89,16 +71,27 @@ export function mergeCssKeyframes(): void {
 }
 
 class CSSSource {
+	private readonly _url: string;
+	private readonly _file: string;
+
 	private _selectors: RuleSet[] = [];
 	private _keyframes: Keyframes[] = [];
+	private _source: string;
 
-	private constructor(
-		private _ast: ReworkCSS.SyntaxTree,
-		private _url: string,
-		private _file: string,
-		private _source: string,
-	) {
-		this.parse();
+	private constructor(ast: object, url: string, file: string, source: string) {
+		this._url = url;
+		this._file = file;
+		this._source = source;
+
+		if (!ast) {
+			ast = this.parse();
+		}
+
+		if (ast) {
+			this.createSelectorsAndKeyframes();
+		} else {
+			this._selectors = [];
+		}
 	}
 
 	public static fromDetect(cssOrAst: any, fileName?: string): CSSSource {
@@ -153,7 +146,6 @@ class CSSSource {
 		}
 
 		const relativeUri = `.${uri.substring(appPath.length)}`;
-
 		return relativeUri;
 	}
 
@@ -190,7 +182,7 @@ class CSSSource {
 		return new CSSSource(undefined, url, undefined, source);
 	}
 
-	public static fromAST(ast: ReworkCSS.SyntaxTree, url?: string): CSSSource {
+	public static fromAST(ast: object, url?: string): CSSSource {
 		return new CSSSource(ast, url, undefined, undefined);
 	}
 
@@ -213,44 +205,46 @@ class CSSSource {
 	}
 
 	@profile
-	private parse(): void {
+	private parse(): object {
+		let ast: object;
+
 		try {
-			if (!this._ast) {
-				if (!this._source && this._file) {
-					this.load();
-				}
-				// [object Object] check guards against empty app.css file
-				if (this._source && this.source !== '[object Object]') {
-					this.parseCSSAst();
-				}
+			if (!this._source && this._file) {
+				this.load();
 			}
-			if (this._ast) {
-				this.createSelectorsAndKeyframes();
-			} else {
-				this._selectors = [];
-			}
+
+			// [object Object] check guards against empty app.css file
+			ast = this._source && this.source !== '[object Object]' ? this.parseCSSAst() : null;
 		} catch (e) {
 			if (Trace.isEnabled()) {
 				Trace.write('Css styling failed: ' + e, Trace.categories.Style, Trace.messageType.error);
 			}
-			this._selectors = [];
+			ast = null;
 		}
+
+		return ast;
 	}
 
 	@profile
-	private async parseCSSAst() {
-		if (this._source) {
-			if (__CSS_PARSER__ === 'css-tree') {
-				this._ast = cssTreeParse(this._source, this._file);
-			} else if (__CSS_PARSER__ === 'nativescript') {
-				const cssparser = new CSS3Parser(this._source);
-				const stylesheet = cssparser.parseAStylesheet();
-				const cssNS = new CSSNativeScript();
-				this._ast = cssNS.parseStylesheet(stylesheet);
-			} else if (__CSS_PARSER__ === 'rework') {
-				this._ast = parseCss(this._source, { source: this._file });
-			}
+	private parseCSSAst() {
+		let ast: object;
+
+		if (!this._source) {
+			return null;
 		}
+
+		if (__CSS_PARSER__ === 'css-tree') {
+			ast = cssTreeParse(this._source, this._file);
+		} else if (__CSS_PARSER__ === 'nativescript') {
+			const cssparser = new CSS3Parser(this._source);
+			const stylesheet = cssparser.parseAStylesheet();
+			const cssNS = new CSSNativeScript();
+			ast = cssNS.parseStylesheet(stylesheet);
+		} else if (__CSS_PARSER__ === 'rework') {
+			ast = parseCss(this._source, { source: this._file });
+		}
+
+		return ast;
 	}
 
 	@profile
