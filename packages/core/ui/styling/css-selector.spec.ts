@@ -21,10 +21,8 @@ describe('css-selector', () => {
 
 	function create(css: string, source = 'css-selectors.ts@test'): { rulesets: RuleSet[]; selectorScope: StyleSheetSelectorScope<any> } {
 		const ast = parseCSSStyleSheet(css, source);
-		const adapter = new CSSTreeAdapter();
+		const adapter = new CSSTreeAdapter(ast);
 		const rulesets = [];
-
-		adapter.setAST(ast);
 
 		adapter.parseCSSRules({
 			onRule(selectors, declarations, mediaQueryString) {

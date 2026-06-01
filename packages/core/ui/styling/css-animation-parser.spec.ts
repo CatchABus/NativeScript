@@ -244,10 +244,8 @@ describe('css-animation-parser', () => {
 		// helper function
 		function testKeyframesArrayFromCSS(css: string, expectedName?: string): KeyframeInfo[] {
 			const ast = parseCSSStyleSheet(css, 'test.css');
-			const adapter = new CSSTreeAdapter();
+			const adapter = new CSSTreeAdapter(ast);
 			const keyframesRules: Keyframes[] = [];
-
-			adapter.setAST(ast);
 
 			adapter.parseCSSRules({
 				onKeyframesRule(name, keyframes, mediaQueryString) {

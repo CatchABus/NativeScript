@@ -8,7 +8,7 @@ export type URL = string;
 export type Angle = number;
 export interface Unit<T> {
 	value: number;
-	unit: string;
+	unit: T;
 }
 export type Length = Unit<'px' | 'dip'>;
 export type Percentage = Unit<'%'>;
@@ -302,32 +302,56 @@ export function parseBackgroundPosition(text: string, start = 0, keyword = parse
 
 		return align.value;
 	}
+
+	let pos: Parsed<BackgroundPosition>;
 	let end = start;
+
 	if (keyword && backgroundPositionKeywords.has(keyword.value)) {
 		end = keyword.end;
-		const firstDirection = backgroundPositionKeywordsDirection[keyword.value];
 
-		const firstLength = firstDirection !== 'center' && parsePercentageOrLength(text, end);
-		if (firstLength) {
-			end = firstLength.end;
+		const firstDirection = backgroundPositionKeywordsDirection[keyword.value];
+		let firstLength: Parsed<LengthPercentage>;
+		let secondKeyword: Parsed<string>;
+		let secondLength: Parsed<LengthPercentage>;
+		let isValidSecondKeyword: boolean;
+
+		const nextLength = parsePercentageOrLength(text, end);
+		if (nextLength) {
+			end = nextLength.end;
 		}
 
-		const secondKeyword = parseKeyword(text, end);
-		if (secondKeyword && backgroundPositionKeywords.has(secondKeyword.value)) {
-			end = secondKeyword.end;
-			const secondDirection = backgroundPositionKeywordsDirection[secondKeyword.end];
+		// If parser reached the end, it means the second value is the vertical alignment
+		if (end === text.length) {
+			firstLength = null;
+			secondKeyword = {
+				start: end,
+				value: nextLength ? 'top' : 'center',
+				end: text.length,
+			};
+			secondLength = nextLength;
+			isValidSecondKeyword = true;
+		} else {
+			firstLength = nextLength;
+			secondKeyword = parseKeyword(text, end);
+			isValidSecondKeyword = secondKeyword && backgroundPositionKeywords.has(secondKeyword.value);
+
+			if (isValidSecondKeyword) {
+				end = secondKeyword.end;
+
+				secondLength = parsePercentageOrLength(text, end);
+				if (secondLength) {
+					end = secondLength.end;
+				}
+			}
+		}
+
+		if (isValidSecondKeyword) {
+			const secondDirection = backgroundPositionKeywordsDirection[secondKeyword.value];
 
 			if (firstDirection === secondDirection && firstDirection !== 'center') {
-				return null; // Reject pair of both horizontal or both vertical alignments.
-			}
-
-			const secondLength = secondDirection !== 'center' && parsePercentageOrLength(text, end);
-			if (secondLength) {
-				end = secondLength.end;
-			}
-
-			if ((firstDirection === secondDirection && secondDirection === 'center') || firstDirection === 'x' || secondDirection === 'y') {
-				return {
+				pos = null; // Reject pair of both horizontal or both vertical alignments.
+			} else if ((firstDirection === secondDirection && secondDirection === 'center') || firstDirection === 'x' || secondDirection === 'y') {
+				pos = {
 					start,
 					end,
 					value: {
@@ -336,7 +360,7 @@ export function parseBackgroundPosition(text: string, start = 0, keyword = parse
 					},
 				};
 			} else {
-				return {
+				pos = {
 					start,
 					end,
 					value: {
@@ -347,9 +371,16 @@ export function parseBackgroundPosition(text: string, start = 0, keyword = parse
 			}
 		} else {
 			if (firstDirection === 'center') {
-				return { start, end, value: { x: 'center', y: 'center' } };
+				pos = {
+					start,
+					end,
+					value: {
+						x: 'center',
+						y: 'center',
+					},
+				};
 			} else if (firstDirection === 'x') {
-				return {
+				pos = {
 					start,
 					end,
 					value: {
@@ -358,7 +389,7 @@ export function parseBackgroundPosition(text: string, start = 0, keyword = parse
 					},
 				};
 			} else {
-				return {
+				pos = {
 					start,
 					end,
 					value: {
@@ -372,32 +403,54 @@ export function parseBackgroundPosition(text: string, start = 0, keyword = parse
 		const firstLength = parsePercentageOrLength(text, end);
 		if (firstLength) {
 			end = firstLength.end;
-			const secondLength = parsePercentageOrLength(text, end);
-			if (secondLength) {
-				end = secondLength.end;
 
-				return {
-					start,
-					end,
-					value: {
-						x: { align: 'left', offset: firstLength.value },
-						y: { align: 'top', offset: secondLength.value },
-					},
-				};
+			const secondKeyword = parseKeyword(text, end);
+			if (secondKeyword && backgroundPositionKeywords.has(secondKeyword.value)) {
+				end = secondKeyword.end;
+
+				const secondDirection = backgroundPositionKeywordsDirection[secondKeyword.value];
+				if (secondDirection && secondDirection === 'x') {
+					pos = null; // Reject pair of both horizontal alignments.
+				} else {
+					pos = {
+						start,
+						end,
+						value: {
+							x: { align: 'left', offset: firstLength.value },
+							y: secondKeyword.value as VerticalAlign,
+						},
+					};
+				}
 			} else {
-				return {
-					start,
-					end,
-					value: {
-						x: { align: 'left', offset: firstLength.value },
-						y: 'center',
-					},
-				};
+				const secondLength = parsePercentageOrLength(text, end);
+				if (secondLength) {
+					end = secondLength.end;
+
+					pos = {
+						start,
+						end,
+						value: {
+							x: { align: 'left', offset: firstLength.value },
+							y: { align: 'top', offset: secondLength.value },
+						},
+					};
+				} else {
+					pos = {
+						start,
+						end,
+						value: {
+							x: { align: 'left', offset: firstLength.value },
+							y: 'center',
+						},
+					};
+				}
 			}
 		} else {
-			return null;
+			pos = null;
 		}
 	}
+
+	return pos;
 }
 
 const directionRegEx = /\s*to\s*(left|right|top|bottom)\s*(left|right|top|bottom)?\s*/gy;

@@ -71,6 +71,8 @@ describe('css-value-parser', () => {
 				},
 			});
 			test(parseBackgroundPosition, 'right center', { start: 0, end: 12, value: { x: 'right', y: 'center' } });
+			test(parseBackgroundPosition, 'right 50%', { start: 0, end: 9, value: { x: 'right', y: { align: 'top', offset: { value: 0.5, unit: '%' } } } });
+			test(parseBackgroundPosition, '60% top', { start: 0, end: 7, value: { x: { align: 'left', offset: { value: 0.6, unit: '%' } }, y: 'top' } });
 			test(parseBackgroundPosition, 'center left 100%', { start: 0, end: 16, value: { x: { align: 'left', offset: { value: 1, unit: '%' } }, y: 'center' } });
 			test(parseBackgroundPosition, 'top 50% left 100%', { start: 0, end: 17, value: { x: { align: 'left', offset: { value: 1, unit: '%' } }, y: { align: 'top', offset: { value: 0.5, unit: '%' } } } });
 			test(parseBackgroundPosition, 'bottom left 25%', { start: 0, end: 15, value: { x: { align: 'left', offset: { value: 0.25, unit: '%' } }, y: 'bottom' } });
