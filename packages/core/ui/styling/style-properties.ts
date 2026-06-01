@@ -11,7 +11,7 @@ import { Trace } from '../../trace';
 import { CoreTypes } from '../../core-types';
 import { Length, FixedLength, PercentLength } from './length-shared';
 
-import { parseBackground } from '../../css/parser';
+import { parseBackground } from '../../css/css-value-parser';
 import { LinearGradient } from './linear-gradient';
 import { parseCSSShadow, ShadowCSSValues } from './css-shadow';
 import { transformConverter } from './css-transform';

@@ -2,7 +2,7 @@ import { Color } from '../../../color';
 import { View } from '../../core/view';
 import { RootLayoutBase, defaultShadeCoverOptions } from './root-layout-common';
 import { TransitionAnimation, ShadeCoverOptions } from '.';
-import { parseLinearGradient } from '../../../css/parser';
+import { parseLinearGradient } from '../../../css/css-value-parser';
 import { LinearGradient } from '../../styling/linear-gradient';
 import { layout } from '../../../utils';
 

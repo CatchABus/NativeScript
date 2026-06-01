@@ -4,22 +4,23 @@ import { View } from '../core/view';
 import { _evaluateCssVariableExpression, _evaluateCssCalcExpression, isCssVariable, isCssVariableExpression, isCssCalcExpression } from '../core/properties';
 import { unsetValue } from '../core/properties/property-shared';
 
-import { RuleSet, StyleSheetSelectorScope, SelectorCore, SelectorsMatch, ChangeMap, fromAstNode, Node, MEDIA_QUERY_SEPARATOR, matchMediaQueryString } from './css-selector';
+import { RuleSet, StyleSheetSelectorScope, SelectorCore, SelectorsMatch, ChangeMap, Node, matchMediaQueryString, createRuleSet } from './css-selector';
 import { Trace } from './styling-shared';
 import { File, knownFolders, path } from '../../file-system';
 import { Application, CssChangedEventData, LoadAppCSSEventData } from '../../application';
 import { profile } from './styling-profile';
 
-import { Keyframes, KeyframeAnimationInfo, KeyframeAnimation } from '../animation/keyframe-animation';
+import { KeyframeAnimationInfo, KeyframeAnimation } from '../animation/keyframe-animation';
 
 import { CssAnimationParser } from './css-animation-parser';
 import { sanitizeModuleName } from '../../utils/common';
 import { resolveModuleName } from '../../module-name-resolver';
 import { cleanupImportantFlags } from './css-utils';
-import { cssTreeParse } from '../../css/css-tree-parser';
-import { CSS3Parser } from '../../css/CSS3Parser';
-import { CSSNativeScript } from '../../css/CSSNativeScript';
-import { parse as parseCss } from '../../css/lib/parse';
+import { AbstractCSSAdapter } from '../../css/adapters/AbstractCSSAdapter';
+import { DummyCSSAdapter } from '../../css/adapters/DummyCSSAdapter';
+import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
+import { parseCSSStyleSheet } from '../../css/css-parser';
+import { Keyframes } from '../animation/animation-shared';
 
 let mergedApplicationCssSelectors: RuleSet[] = [];
 let applicationCssSelectors: RuleSet[] = [];
@@ -36,7 +37,6 @@ let currentScopeTag: string = null;
 
 const animationsSymbol = Symbol('animations');
 const kebabCasePattern = /-([a-z])/g;
-const pattern = /('|")(.*?)\1/;
 
 /**
  * Evaluate css-variable and css-calc expressions
@@ -71,11 +71,12 @@ export function mergeCssKeyframes(): void {
 }
 
 class CSSSource {
+	private readonly _adapter: AbstractCSSAdapter;
 	private readonly _url: string;
 	private readonly _file: string;
 
-	private _selectors: RuleSet[] = [];
-	private _keyframes: Keyframes[] = [];
+	private _selectors: RuleSet[];
+	private _keyframes: Keyframes[];
 	private _source: string;
 
 	private constructor(ast: object, url: string, file: string, source: string) {
@@ -88,9 +89,12 @@ class CSSSource {
 		}
 
 		if (ast) {
+			this._adapter = this._resolveAdapter();
+			this._adapter.setAST(ast);
 			this.createSelectorsAndKeyframes();
 		} else {
 			this._selectors = [];
+			this._keyframes = [];
 		}
 	}
 
@@ -103,8 +107,8 @@ class CSSSource {
 				cssOrAst = cssOrAst.default;
 			}
 
-			if (cssOrAst.type === 'stylesheet' && cssOrAst.stylesheet && cssOrAst.stylesheet.rules) {
-				// css-loader
+			// css-loader
+			if (typeof cssOrAst.type === 'string') {
 				return CSSSource.fromAST(cssOrAst, fileName);
 			}
 		}
@@ -198,6 +202,18 @@ class CSSSource {
 		return this._source;
 	}
 
+	private _resolveAdapter(): AbstractCSSAdapter {
+		let adapter: AbstractCSSAdapter;
+
+		if (__CSS_PARSER__ === 'css-tree') {
+			adapter = new CSSTreeAdapter();
+		} else {
+			adapter = new DummyCSSAdapter();
+		}
+
+		return adapter;
+	}
+
 	@profile
 	private load(): void {
 		const file = File.fromPath(this._file);
@@ -227,110 +243,59 @@ class CSSSource {
 
 	@profile
 	private parseCSSAst() {
-		let ast: object;
-
-		if (!this._source) {
-			return null;
-		}
-
-		if (__CSS_PARSER__ === 'css-tree') {
-			ast = cssTreeParse(this._source, this._file);
-		} else if (__CSS_PARSER__ === 'nativescript') {
-			const cssparser = new CSS3Parser(this._source);
-			const stylesheet = cssparser.parseAStylesheet();
-			const cssNS = new CSSNativeScript();
-			ast = cssNS.parseStylesheet(stylesheet);
-		} else if (__CSS_PARSER__ === 'rework') {
-			ast = parseCss(this._source, { source: this._file });
-		}
-
-		return ast;
+		return parseCSSStyleSheet(this.source, this._file, true);
 	}
 
 	@profile
 	private createSelectorsAndKeyframes() {
-		if (this._ast) {
-			const nodes = this._ast.stylesheet.rules;
+		const rulesets: RuleSet[] = [];
+		const keyframesRules: Keyframes[] = [];
 
-			const rulesets: RuleSet[] = [];
-			const keyframes: Keyframes[] = [];
+		// When css2json-loader is enabled, imports are handled there and removed from AST rules
+		this._populateRulesFromImports(rulesets, keyframesRules);
 
-			// When css2json-loader is enabled, imports are handled there and removed from AST rules
-			populateRulesFromImports(nodes, rulesets, keyframes);
-			_populateRules(nodes, rulesets, keyframes);
-
-			if (rulesets && rulesets.length) {
-				rulesets.forEach((rule) => {
-					rule[animationsSymbol] = CssAnimationParser.keyframeAnimationsFromCSSDeclarations(rule.declarations);
+		this._adapter.parseCSSRules({
+			onRule(selectors, declarations, mediaQueryString) {
+				const ruleset = createRuleSet(selectors, declarations);
+				ruleset.mediaQueryString = mediaQueryString;
+				rulesets.push(ruleset);
+			},
+			onKeyframesRule(name, keyframes, mediaQueryString) {
+				keyframesRules.push({
+					name,
+					keyframes,
+					mediaQueryString,
 				});
-			}
+			},
+		});
 
-			this._selectors = rulesets;
-			this._keyframes = keyframes;
+		if (rulesets && rulesets.length) {
+			for (const rule of rulesets) {
+				const keyframeAnimations = CssAnimationParser.keyframeAnimationsFromCSSDeclarations(rule.declarations);
+				if (keyframeAnimations) {
+					rule[animationsSymbol] = keyframeAnimations;
+				}
+			}
+		}
+
+		this._selectors = rulesets;
+		this._keyframes = keyframesRules;
+	}
+
+	private _populateRulesFromImports(rulesets: RuleSet[], keyframes: Keyframes[]): void {
+		const imports = this._adapter.parseCSSImports();
+		const cssFiles: CSSSource[] = imports.map((imp) => (imp.source ? CSSSource.fromFileImport(imp.url, imp.source) : CSSSource.fromURI(imp.url)));
+
+		for (const cssFile of cssFiles) {
+			if (cssFile) {
+				rulesets.push(...cssFile.selectors);
+				keyframes.push(...cssFile.keyframes);
+			}
 		}
 	}
 
 	toString(): string {
 		return this._file || this._url || '(in-memory)';
-	}
-}
-
-function populateRulesFromImports(nodes: ReworkCSS.Node[], rulesets: RuleSet[], keyframes: Keyframes[]): void {
-	const imports = nodes.filter((r) => r.type === 'import');
-	if (!imports.length) {
-		return;
-	}
-
-	const urlFromImportObject = (importObject) => {
-		const importItem = importObject['import'] as string;
-		const urlMatch = importItem && importItem.match(pattern);
-
-		return urlMatch && urlMatch[2];
-	};
-
-	const sourceFromImportObject = (importObject) => importObject['position'] && importObject['position']['source'];
-
-	const toUrlSourcePair = (importObject) => ({
-		url: urlFromImportObject(importObject),
-		source: sourceFromImportObject(importObject),
-	});
-
-	const getCssFile = ({ url, source }) => (source ? CSSSource.fromFileImport(url, source) : CSSSource.fromURI(url));
-
-	const cssFiles = imports
-		.map(toUrlSourcePair)
-		.filter(({ url }) => !!url)
-		.map(getCssFile);
-
-	for (const cssFile of cssFiles) {
-		if (cssFile) {
-			rulesets.push(...cssFile.selectors);
-			keyframes.push(...cssFile.keyframes);
-		}
-	}
-}
-
-export function _populateRules(nodes: ReworkCSS.Node[], rulesets: RuleSet[], keyframes: Keyframes[], mediaQueryString?: string): void {
-	for (const node of nodes) {
-		if (isKeyframe(node)) {
-			const keyframeRule: Keyframes = {
-				name: node.name,
-				keyframes: node.keyframes,
-				mediaQueryString: mediaQueryString,
-			};
-
-			keyframes.push(keyframeRule);
-		} else if (isMedia(node)) {
-			// Media query is composite in the case of nested media queries
-			const compositeMediaQuery = mediaQueryString ? mediaQueryString + MEDIA_QUERY_SEPARATOR + node.media : node.media;
-
-			_populateRules(node.rules, rulesets, keyframes, compositeMediaQuery);
-		} else if (isRule(node)) {
-			const ruleset = fromAstNode(node);
-			ruleset.mediaQueryString = mediaQueryString;
-
-			rulesets.push(ruleset);
-		}
 	}
 }
 
@@ -1141,16 +1106,4 @@ function isCurrentDirectory(uriPart: string): boolean {
 
 function isParentDirectory(uriPart: string): boolean {
 	return uriPart === '..';
-}
-
-function isMedia(node: ReworkCSS.Node): node is ReworkCSS.Media {
-	return node.type === 'media';
-}
-
-function isKeyframe(node: ReworkCSS.Node): node is ReworkCSS.Keyframes {
-	return node.type === 'keyframes';
-}
-
-function isRule(node: ReworkCSS.Node): node is ReworkCSS.Rule {
-	return node.type === 'rule';
 }

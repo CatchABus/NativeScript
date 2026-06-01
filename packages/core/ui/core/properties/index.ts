@@ -865,15 +865,19 @@ export class CssAnimationProperty<T extends Style, U> implements CssAnimationPro
 
 	constructor(options: CssAnimationPropertyOptions<T, U>) {
 		const propertyName = options.name;
+		let propertyBagName: string;
+
 		this.name = propertyName;
 
 		if (options.cssName) {
+			propertyBagName = options.cssName;
 			cssPropertyNames.push(options.cssName);
+		} else {
+			propertyBagName = propertyName;
 		}
 
-		CssAnimationProperty.properties[propertyName] = this;
-		if (options.cssName && options.cssName !== propertyName) {
-			CssAnimationProperty.properties[options.cssName] = this;
+		if (propertyBagName) {
+			CssAnimationProperty.properties[propertyBagName.toLowerCase()] = this;
 		}
 
 		this._valueConverter = options.valueConverter;

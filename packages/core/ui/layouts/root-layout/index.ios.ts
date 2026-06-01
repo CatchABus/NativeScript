@@ -4,7 +4,7 @@ import { RootLayoutBase, defaultShadeCoverOptions } from './root-layout-common';
 import { TransitionAnimation, ShadeCoverOptions } from '.';
 import { LinearGradient } from '../../styling/linear-gradient';
 import { ios as iosViewUtils } from '../../utils';
-import { parseLinearGradient } from '../../../css/parser';
+import { parseLinearGradient } from '../../../css/css-value-parser';
 export * from './root-layout-common';
 
 export class RootLayout extends RootLayoutBase {

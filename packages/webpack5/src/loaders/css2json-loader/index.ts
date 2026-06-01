@@ -14,6 +14,7 @@ export default function loader(content: string, map: any) {
 	const ast = parse(content, {
 		context: 'stylesheet',
 		parseAtrulePrelude: false,
+		parseRulePrelude: false,
 		parseValue: false,
 		positions: false,
 	}) as CssTreeStyleSheet;

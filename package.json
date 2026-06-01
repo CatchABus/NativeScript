@@ -47,6 +47,7 @@
 		"@swc-node/register": "~1.10.1",
 		"@swc/core": "~1.12.7",
 		"@swc/helpers": "~0.5.17",
+		"@types/css-tree": "^2.3.11",
 		"@types/jest": "30.0.0",
 		"@types/node": "^20.0.0",
 		"@typescript-eslint/eslint-plugin": "^8.46.4",

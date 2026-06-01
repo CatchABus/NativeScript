@@ -1,10 +1,11 @@
 import { CssAnimationProperty } from '../core/properties';
 
-import { KeyframeAnimationInfo, KeyframeDeclaration, KeyframeInfo, UnparsedKeyframe } from '../animation/keyframe-animation';
+import { KeyframeAnimationInfo } from '../animation/keyframe-animation';
 import { timeConverter, animationTimingFunctionConverter } from '../styling/converters';
 
 import { transformConverter } from '../styling/css-transform';
-import { cleanupImportantFlags } from './css-utils';
+import { NSCssDeclaration, NSCSSKeyframe } from '../../css/adapters/AbstractCSSAdapter';
+import { KeyframeInfo } from '../animation/animation-shared';
 
 const ANIMATION_PROPERTY_HANDLERS = Object.freeze({
 	'animation-name': (info: any, value: any) => (info.name = value.replace(/['"]/g, '')),
@@ -17,9 +18,9 @@ const ANIMATION_PROPERTY_HANDLERS = Object.freeze({
 });
 
 export class CssAnimationParser {
-	public static keyframeAnimationsFromCSSDeclarations(declarations: KeyframeDeclaration[]): KeyframeAnimationInfo[] {
-		if (declarations === null || declarations === undefined) {
-			return undefined;
+	public static keyframeAnimationsFromCSSDeclarations(declarations: NSCssDeclaration[]): KeyframeAnimationInfo[] {
+		if (declarations == null) {
+			return null;
 		}
 
 		const animations = new Array<KeyframeAnimationInfo>();
@@ -40,20 +41,26 @@ export class CssAnimationParser {
 			}
 		});
 
-		return animations.length === 0 ? undefined : animations;
+		return animations.length === 0 ? null : animations;
 	}
 
-	public static keyframesArrayFromCSS(keyframes: UnparsedKeyframe[]): KeyframeInfo[] {
-		const parsedKeyframes = new Array<KeyframeInfo>();
+	public static keyframesArrayFromCSS(keyframes: NSCSSKeyframe[]): KeyframeInfo[] {
+		const parsedKeyframes = {} as {
+			[key: number]: KeyframeInfo;
+		};
+
 		for (const keyframe of keyframes) {
-			const declarations = parseKeyframeDeclarations(keyframe.declarations);
-			for (let time of keyframe.values) {
-				if (time === 'from') {
+			convertKeyframeDeclarationValues(keyframe.declarations);
+
+			for (const value of keyframe.values) {
+				let time: number;
+
+				if (value === 'from') {
 					time = 0;
-				} else if (time === 'to') {
+				} else if (value === 'to') {
 					time = 1;
 				} else {
-					time = parseFloat(time) / 100;
+					time = parseFloat(value) / 100;
 					if (time < 0) {
 						time = 0;
 					}
@@ -61,30 +68,32 @@ export class CssAnimationParser {
 						time = 100;
 					}
 				}
+
 				let current = parsedKeyframes[time];
-				if (current === undefined) {
-					current = <KeyframeInfo>{};
-					current.duration = time;
-					current.declarations = [];
+				if (!current) {
+					current = {
+						duration: time,
+						declarations: [],
+					};
 					parsedKeyframes[time] = current;
 				}
+
 				for (const declaration of keyframe.declarations) {
 					if (declaration.property === 'animation-timing-function') {
 						current.curve = animationTimingFunctionConverter(declaration.value);
 					}
 				}
-				current.declarations = current.declarations.concat(declarations);
+				current.declarations = current.declarations.concat(keyframe.declarations);
 			}
 		}
-		const array = [];
-		for (const parsedKeyframe in parsedKeyframes) {
-			array.push(parsedKeyframes[parsedKeyframe]);
-		}
-		array.sort(function (a, b) {
+
+		const keyframeValues = Object.values(parsedKeyframes);
+
+		keyframeValues.sort((a, b) => {
 			return a.duration - b.duration;
 		});
 
-		return array;
+		return keyframeValues;
 	}
 }
 
@@ -137,17 +146,6 @@ export function keyframeAnimationsFromCSSProperty(value: any, animations: Keyfra
 			return ![duration, delay, timing, iterationCount, direction, fillMode, playState].filter(Boolean).includes(v);
 		});
 
-		// console.log({
-		// 	duration,
-		// 	delay,
-		// 	timing,
-		// 	iterationCount,
-		// 	direction,
-		// 	fillMode,
-		// 	playState,
-		// 	name,
-		// });
-
 		if (duration) {
 			ANIMATION_PROPERTY_HANDLERS['animation-duration'](animationInfo, duration);
 		}
@@ -182,23 +180,16 @@ export function keyframeAnimationsFromCSSProperty(value: any, animations: Keyfra
 	}
 }
 
-export function parseKeyframeDeclarations(unparsedKeyframeDeclarations: KeyframeDeclaration[]): KeyframeDeclaration[] {
-	const declarations = unparsedKeyframeDeclarations.reduce((declarations, { property: unparsedProperty, value: unparsedValue }) => {
-		const property = CssAnimationProperty._getByCssName(unparsedProperty);
-		unparsedValue = cleanupImportantFlags(unparsedValue, property?.cssLocalName);
+export function convertKeyframeDeclarationValues(declarations: NSCssDeclaration[]): void {
+	for (let i = 0, length = declarations.length; i < length; i++) {
+		const decl = declarations[i];
+		const propertyInstance = CssAnimationProperty._getByCssName(decl.property);
 
-		if (typeof unparsedProperty === 'string' && property?._valueConverter) {
-			declarations[property.name] = property._valueConverter(<string>unparsedValue);
-		} else if (unparsedProperty === 'transform') {
-			const transformations = transformConverter(unparsedValue);
-			Object.assign(declarations, transformations);
+		if (propertyInstance?._valueConverter) {
+			decl.property = propertyInstance.name;
+			decl.value = propertyInstance._valueConverter(decl.value);
+		} else if (decl.property === 'transform') {
+			decl.value = transformConverter(decl.value);
 		}
-
-		return declarations;
-	}, {});
-
-	return Object.keys(declarations).map((property) => ({
-		property,
-		value: declarations[property],
-	}));
+	}
 }

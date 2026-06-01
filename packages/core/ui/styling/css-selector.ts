@@ -1,13 +1,8 @@
 import { parse as convertToCSSWhatSelector, Selector as CSSWhatSelector, DataType as CSSWhatDataType } from 'css-what';
 import '../../globals';
-import { isCssVariable } from '../core/properties';
-import { Trace, CoreTypes } from './styling-shared';
 import { isNullOrUndefined } from '../../utils/types';
-
-import * as ReworkCSS from '../../css';
 import { checkIfMediaQueryMatches } from '../../media-query-list';
-
-export const MEDIA_QUERY_SEPARATOR = '&&';
+import { MEDIA_QUERY_SEPARATOR, NSCssDeclaration } from '../../css/adapters/AbstractCSSAdapter';
 
 /**
  * An interface describing the shape of a type on which the selectors may apply.
@@ -25,11 +20,6 @@ export interface Node {
 	getChildIndex?(node: Node): number;
 	getChildAt?(index: number): Node;
 	getChildrenCount?(): number;
-}
-
-export interface Declaration {
-	property: string;
-	value: string;
 }
 
 export type ChangeMap<T extends Node> = Map<T, Changes>;
@@ -675,7 +665,9 @@ export namespace Selector {
 		public trackChanges(node: Node, map: ChangeAccumulator): void {
 			this.selectors.forEach((sel, i) => {
 				if (i === 0) {
-					node && sel.trackChanges(node, map);
+					if (node) {
+						sel.trackChanges(node, map);
+					}
 				} else {
 					node = node.parent;
 
@@ -782,12 +774,12 @@ export namespace Selector {
 
 export class RuleSet {
 	public selectors: SelectorCore[];
-	public declarations: Declaration[];
+	public declarations: NSCssDeclaration[];
 	public mediaQueryString: string;
 	public tag?: string | number;
 	public scopedTag?: string;
 
-	constructor(selectors: SelectorCore[], declarations: Declaration[]) {
+	constructor(selectors: SelectorCore[], declarations: NSCssDeclaration[]) {
 		this.selectors = selectors;
 		this.declarations = declarations;
 		this.selectors.forEach((sel) => (sel.ruleset = this));
@@ -804,15 +796,9 @@ export class RuleSet {
 	}
 }
 
-export function fromAstNode(astRule: ReworkCSS.Rule): RuleSet {
-	const declarations = astRule.declarations.filter(isDeclaration).map(createDeclaration);
-	const selectors = astRule.selectors.map(createSelector);
-
-	return new RuleSet(selectors, declarations);
-}
-
-function createDeclaration(decl: ReworkCSS.Declaration): any {
-	return { property: isCssVariable(decl.property) ? decl.property : decl.property.toLowerCase(), value: decl.value };
+export function createRuleSet(selectors: string[], declarations: NSCssDeclaration[]): RuleSet {
+	const selectorInstances = selectors.map(createSelector);
+	return new RuleSet(selectorInstances, declarations);
 }
 
 function createSimpleSelectorFromAst(ast: CSSWhatSelector): SimpleSelector {
@@ -944,10 +930,6 @@ export function createSelector(sel: string): SimpleSelector | SimpleSelectorSequ
 	} catch (e) {
 		return new InvalidSelector(e);
 	}
-}
-
-function isDeclaration(node: ReworkCSS.Node): node is ReworkCSS.Declaration {
-	return node.type === 'declaration';
 }
 
 export function matchMediaQueryString(mediaQueryString: string, cachedQueries: string[]): boolean {
@@ -1165,6 +1147,6 @@ export const CSSHelper = {
 	SelectorScope,
 	MediaQuerySelectorScope,
 	StyleSheetSelectorScope,
-	fromAstNode,
+	createRuleSet,
 	SelectorsMatch,
 };

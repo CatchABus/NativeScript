@@ -1,7 +1,7 @@
-import { parse } from '../../css/reworkcss.js';
 import { Screen } from '../../platform';
-import { createSelector, RuleSet, StyleSheetSelectorScope, fromAstNode, Node, Changes } from './css-selector';
-import { _populateRules } from './style-scope';
+import { createRuleSet, createSelector, RuleSet, StyleSheetSelectorScope } from './css-selector';
+import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
+import { parseCSSStyleSheet } from '../../css/css-parser';
 
 describe('css-selector', () => {
 	it('button[attr]', () => {
@@ -20,11 +20,20 @@ describe('css-selector', () => {
 	});
 
 	function create(css: string, source = 'css-selectors.ts@test'): { rulesets: RuleSet[]; selectorScope: StyleSheetSelectorScope<any> } {
-		const parsed = parse(css, { source });
-		const rulesAst = parsed.stylesheet.rules;
+		const ast = parseCSSStyleSheet(css, source);
+		const adapter = new CSSTreeAdapter();
 		const rulesets = [];
 
-		_populateRules(rulesAst, rulesets, []);
+		adapter.setAST(ast);
+
+		adapter.parseCSSRules({
+			onRule(selectors, declarations, mediaQueryString) {
+				const ruleset = createRuleSet(selectors, declarations);
+				ruleset.mediaQueryString = mediaQueryString;
+
+				rulesets.push(ruleset);
+			},
+		});
 
 		const selectorScope = new StyleSheetSelectorScope(rulesets);
 

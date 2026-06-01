@@ -1,8 +1,8 @@
 export { ActionBar, ActionItem, ActionItems, NavigationButton } from './action-bar';
 export { ActivityIndicator } from './activity-indicator';
 export { Animation, _resolveAnimationCurve } from './animation';
-export { KeyframeAnimation, KeyframeAnimationInfo, KeyframeDeclaration, KeyframeInfo } from './animation/keyframe-animation';
-export type { AnimationDefinition, Pair, Transformation, TransformationType, TransformationValue, TransformFunctionsInfo, Point3D, AnimationPromise, Cancelable } from './animation/animation-types';
+export { KeyframeAnimation, KeyframeAnimationInfo } from './animation/keyframe-animation';
+export type { AnimationDefinition, Pair, Transformation, TransformationType, TransformationValue, TransformFunctionsInfo, Point3D, AnimationPromise, Cancelable, KeyframeInfo } from './animation/animation-types';
 export * from './animation/animation-shared';
 export { Builder } from './builder';
 export type { LoadOptions } from './builder';
@@ -89,7 +89,7 @@ export type { CommonLayoutParams } from './styling/style';
 export * from './styling/style-properties';
 export * from './styling/length-shared';
 export { LinearGradient } from './styling/linear-gradient';
-export { CssAnimationParser, parseKeyframeDeclarations } from './styling/css-animation-parser';
+export { CssAnimationParser, convertKeyframeDeclarationValues } from './styling/css-animation-parser';
 export { CSSHelper } from './styling/css-selector';
 
 export { Switch } from './switch';

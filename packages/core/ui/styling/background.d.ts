@@ -1,6 +1,6 @@
 import { Color } from '../../color';
 import { View } from '../core/view';
-import { BackgroundRepeat } from '../../css/parser';
+import { BackgroundRepeat } from '../../css/css-value-parser';
 import { LinearGradient } from './linear-gradient';
 import { ClipPathFunction } from './clip-path-function';
 import { BoxShadow } from './box-shadow';

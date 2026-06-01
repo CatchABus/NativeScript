@@ -1,7 +1,9 @@
 import { CoreTypes } from '../../core-types';
 import type { KeyframeAnimationInfo, KeyframeInfo } from '../animation';
 import { CssAnimationParser, keyframeAnimationsFromCSSProperty } from './css-animation-parser';
-import { cssTreeParse } from '../../css/css-tree-parser';
+import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
+import { Keyframes } from '../animation/keyframe-animation';
+import { parseCSSStyleSheet } from '../../css/css-parser';
 
 function getCurves() {
 	return {
@@ -241,21 +243,31 @@ describe('css-animation-parser', () => {
 	describe('keyframe-parser', () => {
 		// helper function
 		function testKeyframesArrayFromCSS(css: string, expectedName?: string): KeyframeInfo[] {
-			const ast = cssTreeParse(css, 'test.css');
-			const rules = ast.stylesheet.rules;
-			const firstRule = rules[0];
+			const ast = parseCSSStyleSheet(css, 'test.css');
+			const adapter = new CSSTreeAdapter();
+			const keyframesRules: Keyframes[] = [];
 
-			expect(rules.length).toBe(1);
-			expect(firstRule.type).toBe('keyframes');
+			adapter.setAST(ast);
 
-			const name = firstRule.name;
-			const keyframes = firstRule.keyframes;
+			adapter.parseCSSRules({
+				onKeyframesRule(name, keyframes, mediaQueryString) {
+					keyframesRules.push({
+						name,
+						keyframes,
+						mediaQueryString,
+					});
+				},
+			});
+
+			const firstRule = keyframesRules[0];
+
+			expect(keyframesRules.length).toBe(1);
 
 			if (expectedName) {
-				expect(name).toBe(expectedName);
+				expect(firstRule.name).toBe(expectedName);
 			}
 
-			return CssAnimationParser.keyframesArrayFromCSS(keyframes);
+			return CssAnimationParser.keyframesArrayFromCSS(firstRule.keyframes);
 		}
 
 		it('parses "from" keyframes', () => {

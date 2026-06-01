@@ -1,12 +1,12 @@
 import { Color } from '../color';
-import { parseURL, parseColor, parsePercentageOrLength, parseBackgroundPosition, parseBackground } from './parser';
+import { parseCSSStyleSheet } from './css-parser';
+import { parseURL, parseColor, parsePercentageOrLength, parseBackgroundPosition, parseBackground } from './css-value-parser';
 import { CSS3Parser, TokenObjectType } from './CSS3Parser';
 import { CSSNativeScript } from './CSSNativeScript';
 
 import * as fs from 'fs';
 import * as path from 'path';
 import * as shadyCss from 'shady-css-parser';
-const reworkCss = await import('./reworkcss');
 
 const parseCss: any = require('parse-css');
 const gonzales: any = require('gonzales');
@@ -349,12 +349,9 @@ describe('css', () => {
 			});
 
 			it('serialization', () => {
-				const outReworkFile = path.resolve(testingToolsDir, 'out/rework.css.json');
-				const reworkAst = reworkCss.parse(themeCoreLightIos, { source: 'nativescript-theme-core/css/core.light.css' });
-				fs.writeFileSync(
-					outReworkFile,
-					JSON.stringify(reworkAst, (k, v) => (k === 'position' ? undefined : v), '  '),
-				);
+				const cssOutputFile = path.resolve(testingToolsDir, 'out/raw.css.json');
+				const ast = parseCSSStyleSheet(themeCoreLightIos, 'nativescript-theme-core/css/core.light.css');
+				fs.writeFileSync(cssOutputFile, JSON.stringify(ast, null, '  '));
 
 				const nsParser = new CSS3Parser(themeCoreLightIos);
 				const nativescriptStylesheet = nsParser.parseAStylesheet();
@@ -417,10 +414,6 @@ describe('css', () => {
 					}
 					expect(char).toBe('\n');
 				});
-				const reworkDuration = trapDuration(() => {
-					const ast = reworkCss.parse(themeCoreLightIos, { source: 'nativescript-theme-core/css/core.light.css' });
-					// fs.writeFileSync("rework.css.json", JSON.stringify(ast, null, "\t"));
-				});
 				const shadyDuration = trapDuration(() => {
 					const shadyParser = new shadyCss.Parser();
 					const ast = shadyParser.parse(themeCoreLightIos);
@@ -452,8 +445,7 @@ describe('css', () => {
 					const stylesheet = cssparser.parseAStylesheet();
 				});
 				console.log(`          * Baseline perf: .charCodeAt: ${charCodeByCharCodeDuration}ms. .charAt: ${charByCharDuration}ms. []:${indexerDuration}ms. compareCharIf: ${compareCharIfDuration} compareCharRegEx: ${compareCharRegExDuration}`);
-				console.log(`          * Parsers perf: rework: ${reworkDuration}ms. shady: ${shadyDuration}ms. parse-css: ${parseCssDuration}ms. gonzalesDuration: ${gonzalesDuration} parserlib: ${parserlibDuration} csstree: ${csstreeDuration} nativescript-parse: ${nativescriptParseDuration}ms. nativescriptToReworkAst: ${nativescriptToReworkAstDuration}`);
-				expect(nativescriptParseDuration <= reworkDuration / 3).toBeTruthy();
+				console.log(`          * Parsers perf: shady: ${shadyDuration}ms. parse-css: ${parseCssDuration}ms. gonzalesDuration: ${gonzalesDuration} parserlib: ${parserlibDuration} csstree: ${csstreeDuration} nativescript-parse: ${nativescriptParseDuration}ms. nativescriptToReworkAst: ${nativescriptToReworkAstDuration}`);
 				expect(nativescriptParseDuration <= shadyDuration / 1.5).toBeTruthy();
 			});
 		});
