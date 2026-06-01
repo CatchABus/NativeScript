@@ -28,10 +28,9 @@ const PFLAG_MEASURED_DIMENSION_SET = 1 << 1;
 const PFLAG_LAYOUT_REQUIRED = 1 << 2;
 
 export class View extends ViewCommon {
-	// @ts-ignore
 	nativeViewProtected: UIView;
-	// @ts-ignore
 	viewController: UIViewController;
+
 	private _popoverPresentationDelegate: IOSHelper.UIPopoverPresentationControllerDelegateImp;
 	private _adaptivePresentationDelegate: IOSHelper.UIAdaptivePresentationControllerDelegateImp;
 	private _transitioningDelegate: UIViewControllerTransitioningDelegateImpl;
@@ -1237,7 +1236,6 @@ export class ContainerView extends View {
 }
 
 export class CustomLayoutView extends ContainerView {
-	// @ts-ignore
 	nativeViewProtected: UIView;
 
 	createNativeView() {

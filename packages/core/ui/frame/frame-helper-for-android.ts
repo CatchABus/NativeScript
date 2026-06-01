@@ -133,7 +133,6 @@ export class FragmentCallbacksImplementation implements AndroidFragmentCallbacks
 
 		frame._resolvedPage = page;
 
-		// @ts-ignore
 		if (page.parent === frame) {
 			(frame as Frame)._inheritStyles(page);
 

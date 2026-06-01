@@ -178,7 +178,6 @@ function initializeDialogFragment() {
 				callback['_dialog'] = new WeakRef(this);
 
 				// @ts-ignore
-
 				this.getOnBackPressedDispatcher().addCallback(this, callback);
 			}
 

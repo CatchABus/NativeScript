@@ -32,8 +32,7 @@ function getActiveNetworkInfo(): android.net.NetworkInfo {
 }
 
 function getNetworkCapabilities() {
-	// @ts-ignore
-	const connectivityManager: any = getConnectivityManager();
+	const connectivityManager = getConnectivityManager();
 	const networkToCheck = connectivityManager.getActiveNetwork();
 	const capabilities = connectivityManager.getNetworkCapabilities(networkToCheck);
 	return parseNetworkCapabilities(capabilities);
@@ -44,8 +43,7 @@ function parseNetworkCapabilities(capabilities?: android.net.NetworkCapabilities
 		return connectionType.none;
 	}
 
-	// @ts-ignore
-	const NetworkCapabilities = (android as any).net.NetworkCapabilities;
+	const NetworkCapabilities = android.net.NetworkCapabilities;
 
 	if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
 		return connectionType.wifi;
@@ -163,7 +161,6 @@ export function startMonitoring(connectionTypeChangedCallback: (newConnectionTyp
 
 export function stopMonitoring(): void {
 	if (SDK_VERSION >= 28) {
-		// @ts-ignore
 		const manager = getConnectivityManager();
 		if (manager && callback) {
 			manager.unregisterNetworkCallback(callback);

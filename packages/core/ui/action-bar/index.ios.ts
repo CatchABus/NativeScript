@@ -628,6 +628,11 @@ export class ActionBar extends ActionBarBase {
 		this.setColor(navBar, color);
 	}
 
+	[backgroundInternalProperty.getDefault](): UIColor {
+		return null;
+	}
+	[backgroundInternalProperty.setNative](value: UIColor) {}
+
 	[backgroundColorProperty.getDefault](): UIColor {
 		return this._getBackgroundColor(this.navBar);
 	}
@@ -645,12 +650,6 @@ export class ActionBar extends ActionBarBase {
 			this._setBackgroundImage(navBar, image);
 		});
 	}
-
-	[backgroundInternalProperty.getDefault](): UIColor {
-		return null;
-	}
-	// @ts-ignore
-	[backgroundInternalProperty.setNative](value: UIColor) {}
 
 	[flatProperty.setNative](value: boolean) {
 		const navBar = this.navBar;
