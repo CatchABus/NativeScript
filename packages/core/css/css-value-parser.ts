@@ -35,7 +35,7 @@ export type BackgroundSize =
 	| 'cover'
 	| 'contain'
 	| {
-			x: LengthPercentage;
+			x: 'auto' | LengthPercentage;
 			y: 'auto' | LengthPercentage;
 	  };
 export type HorizontalAlign = 'left' | 'center' | 'right';

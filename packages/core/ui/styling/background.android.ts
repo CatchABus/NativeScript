@@ -1,14 +1,13 @@
 import { View } from '../core/view';
 import { LinearGradient } from './linear-gradient';
 import { ClipPathFunction } from './clip-path-function';
-import { isDataURI, isFileOrResourcePath, RESOURCE_PREFIX, FILE_PREFIX } from '../../utils';
-import { CSSValue, parse } from '../../css-value/reworkcss-value';
+import { isDataURI, isFileOrResourcePath, RESOURCE_PREFIX, FILE_PREFIX, isString } from '../../utils';
 import { path, knownFolders } from '../../file-system';
+import { parseBackgroundPosition, parseBackgroundSize } from '../../css/css-value-parser';
 export * from './background-common';
 
 function fromBase64(source: string): android.graphics.Bitmap {
 	const bytes = android.util.Base64.decode(source, android.util.Base64.DEFAULT);
-
 	return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 }
 
@@ -40,8 +39,8 @@ export function refreshBorderDrawable(view: View, borderDrawable: org.nativescri
 
 	const background = view.style.backgroundInternal;
 	if (background) {
-		const backgroundPositionParsedCSSValues = createNativeCSSValueArray(background.position);
-		const backgroundSizeParsedCSSValues = createNativeCSSValueArray(background.size);
+		const nativeBackgroundPosValues = getNativeBackgroundPosition(background.position);
+		const nativeBackgroundSizeValues = getNativeBackgroundSize(background.size);
 		const blackColor = -16777216; //android.graphics.Color.BLACK;
 
 		let imageUri: string;
@@ -101,23 +100,79 @@ export function refreshBorderDrawable(view: View, borderDrawable: org.nativescri
 			context,
 			background.repeat,
 			background.position,
-			backgroundPositionParsedCSSValues,
+			nativeBackgroundPosValues,
 			background.size,
-			backgroundSizeParsedCSSValues,
+			nativeBackgroundSizeValues,
 		);
-		//console.log(`>>> ${borderDrawable.toDebugString()}`);
 	}
 }
 
-function createNativeCSSValueArray(css: string): androidNative.Array<org.nativescript.widgets.CSSValue> {
-	if (!css) {
+function getNativeBackgroundSize(value: string): androidNative.Array<org.nativescript.widgets.CSSValue> {
+	if (!value) {
 		return null;
 	}
 
-	const cssValues = parse(css) as CSSValue[];
-	const nativeArray = Array.create(org.nativescript.widgets.CSSValue, cssValues.length);
-	for (let i = 0, length = cssValues.length; i < length; i++) {
-		nativeArray[i] = new org.nativescript.widgets.CSSValue(cssValues[i].type, cssValues[i].string, cssValues[i].unit, cssValues[i].value);
+	const parsedSize = parseBackgroundSize(value);
+	if (!parsedSize) {
+		return null;
+	}
+
+	const cssValues = parsedSize.value;
+	let nativeArray: androidNative.Array<org.nativescript.widgets.CSSValue>;
+
+	if (isString(cssValues)) {
+		nativeArray = Array.create(org.nativescript.widgets.CSSValue, 1);
+		nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', cssValues, null, null);
+	} else {
+		const { x, y } = cssValues;
+
+		nativeArray = Array.create(org.nativescript.widgets.CSSValue, 2);
+
+		if (x === 'auto') {
+			nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', x, null, null);
+		} else {
+			const unit = x.unit === 'dip' ? '' : x.unit;
+			nativeArray[0] = new org.nativescript.widgets.CSSValue('number', x.value + unit, unit, x.value);
+		}
+
+		if (y === 'auto') {
+			nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', y, null, null);
+		} else {
+			const unit = y.unit === 'dip' ? '' : y.unit;
+			nativeArray[1] = new org.nativescript.widgets.CSSValue('number', y.value + unit, unit, y.value);
+		}
+	}
+
+	return nativeArray;
+}
+
+function getNativeBackgroundPosition(value: string): androidNative.Array<org.nativescript.widgets.CSSValue> {
+	if (!value) {
+		return null;
+	}
+
+	const parsedPosition = parseBackgroundPosition(value);
+	if (!parsedPosition) {
+		return null;
+	}
+
+	const cssValues = parsedPosition.value;
+	const nativeArray = Array.create(org.nativescript.widgets.CSSValue, 2);
+
+	if (isString(cssValues.x)) {
+		nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', cssValues.x, null, null);
+	} else {
+		const { offset } = cssValues.x;
+		const unit = offset.unit === 'dip' ? '' : offset.unit;
+		nativeArray[0] = new org.nativescript.widgets.CSSValue('number', offset.value + unit, unit, offset.value);
+	}
+
+	if (isString(cssValues.y)) {
+		nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', cssValues.y, null, null);
+	} else {
+		const { offset } = cssValues.y;
+		const unit = offset.unit === 'dip' ? '' : offset.unit;
+		nativeArray[1] = new org.nativescript.widgets.CSSValue('number', offset.value + unit, unit, offset.value);
 	}
 
 	return nativeArray;

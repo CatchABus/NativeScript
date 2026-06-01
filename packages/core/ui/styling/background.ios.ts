@@ -4,14 +4,14 @@ import { View } from '../core/view';
 import { Point, Position } from '../core/view/view-interfaces';
 import { LinearGradient } from './linear-gradient';
 import { Screen } from '../../platform';
-import { isDataURI, isFileOrResourcePath, layout } from '../../utils';
+import { isDataURI, isFileOrResourcePath, isString, layout } from '../../utils';
 import { ios as iosViewUtils, NativeScriptUIView } from '../utils';
 import { ImageSource } from '../../image-source';
-import type { CSSValue } from '../../css-value/reworkcss-value';
-import { parse as cssParse } from '../../css-value/reworkcss-value';
 import { BoxShadow } from './box-shadow';
 import { BackgroundClearFlags } from './background-common';
 import { ClipPathFunction } from './clip-path-function';
+import { parseBackgroundPosition, parseBackgroundSize } from '../../css/css-value-parser';
+import { PercentLength } from './length-shared';
 
 export * from './background-common';
 
@@ -463,35 +463,6 @@ function clearNonUniformBorders(nativeView: NativeScriptUIView): void {
 	nativeView.hasNonUniformBorder = false;
 }
 
-function parsePosition(pos: string): { x: CSSValue; y: CSSValue } {
-	const values = cssParse(pos);
-	if (values.length === 2) {
-		// @ts-ignore
-		return { x: values[0], y: values[1] };
-	}
-
-	if (values.length === 1) {
-		const center = { type: 'ident', string: 'center' };
-
-		if (values[0].type === 'ident') {
-			const val = values[0].string.toLocaleLowerCase();
-
-			// If you only one keyword is specified, the other value is "center"
-			if (val === 'left' || val === 'right') {
-				return { x: values[0], y: center };
-			} else if (val === 'top' || val === 'bottom') {
-				return { x: center, y: values[0] };
-			} else if (val === 'center') {
-				return { x: center, y: center };
-			}
-		} else if (values[0].type === 'number') {
-			return { x: values[0], y: center };
-		}
-	}
-
-	return null;
-}
-
 function getDrawParams(this: void, image: UIImage, background: BackgroundDefinition, width: number, height: number): BackgroundDrawParams {
 	if (!image) {
 		return null;
@@ -502,6 +473,8 @@ function getDrawParams(this: void, image: UIImage, background: BackgroundDefinit
 		repeatY: true,
 		posX: 0,
 		posY: 0,
+		sizeX: 0,
+		sizeY: 0,
 	};
 
 	// repeat
@@ -527,82 +500,59 @@ function getDrawParams(this: void, image: UIImage, background: BackgroundDefinit
 	let imageHeight = imageSize.height;
 
 	// size
-	const size = background.size;
-	if (size) {
-		const values = cssParse(size);
-		if (values.length === 2) {
-			const vx = values[0] as CSSValue;
-			const vy = values[1] as CSSValue;
-			if (vx.unit === '%' && vy.unit === '%') {
-				imageWidth = (width * vx.value) / 100;
-				imageHeight = (height * vy.value) / 100;
+	const parsedSize = background.size ? parseBackgroundSize(background.size) : null;
+	if (parsedSize) {
+		const cssValue = parsedSize.value;
 
-				res.sizeX = imageWidth;
-				res.sizeY = imageHeight;
-			} else if (vx.type === 'number' && vy.type === 'number' && ((vx.unit === 'px' && vy.unit === 'px') || (vx.unit === '' && vy.unit === ''))) {
-				imageWidth = vx.value;
-				imageHeight = vy.value;
-
-				res.sizeX = imageWidth;
-				res.sizeY = imageHeight;
-			}
-		} else if (values.length === 1 && values[0].type === 'ident') {
+		if (isString(cssValue)) {
 			let scale = 0;
-			if (values[0].string === 'cover') {
+
+			if (cssValue === 'cover') {
 				scale = Math.max(width / imageWidth, height / imageHeight);
-			} else if (values[0].string === 'contain') {
+			} else if (cssValue === 'contain') {
 				scale = Math.min(width / imageWidth, height / imageHeight);
 			}
 
 			if (scale > 0) {
 				imageWidth *= scale;
 				imageHeight *= scale;
-
-				res.sizeX = imageWidth;
-				res.sizeY = imageHeight;
 			}
+		} else {
+			imageWidth = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.x, 0, width));
+			imageHeight = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.y, 0, height));
 		}
+
+		res.sizeX = imageWidth;
+		res.sizeY = imageHeight;
 	}
 
 	// position
-	const position = background.position;
-	if (position) {
-		const v = parsePosition(position);
-		if (v) {
-			const spaceX = width - imageWidth;
-			const spaceY = height - imageHeight;
+	const parsedPosition = background.position ? parseBackgroundPosition(background.position) : null;
+	if (parsedPosition) {
+		const cssValues = parsedPosition.value;
+		const spaceX = width - imageWidth;
+		const spaceY = height - imageHeight;
 
-			if (v.x.unit === '%' && v.y.unit === '%') {
-				res.posX = (spaceX * v.x.value) / 100;
-				res.posY = (spaceY * v.y.value) / 100;
-			} else if (v.x.type === 'number' && v.y.type === 'number' && ((v.x.unit === 'px' && v.y.unit === 'px') || (v.x.unit === '' && v.y.unit === ''))) {
-				res.posX = v.x.value;
-				res.posY = v.y.value;
-			} else if (v.x.type === 'ident' && v.y.type === 'ident') {
-				if (v.x.string.toLowerCase() === 'center') {
-					res.posX = spaceX / 2;
-				} else if (v.x.string.toLowerCase() === 'right') {
-					res.posX = spaceX;
-				}
-
-				if (v.y.string.toLowerCase() === 'center') {
-					res.posY = spaceY / 2;
-				} else if (v.y.string.toLowerCase() === 'bottom') {
-					res.posY = spaceY;
-				}
-			} else if (v.x.type === 'number' && v.y.type === 'ident') {
-				if (v.x.unit === '%') {
-					res.posX = (spaceX * v.x.value) / 100;
-				} else if (v.x.unit === 'px' || v.x.unit === '') {
-					res.posX = v.x.value;
-				}
-
-				if (v.y.string.toLowerCase() === 'center') {
-					res.posY = spaceY / 2;
-				} else if (v.y.string.toLowerCase() === 'bottom') {
-					res.posY = spaceY;
-				}
+		if (isString(cssValues.x)) {
+			if (cssValues.x.toLowerCase() === 'center') {
+				res.posX = spaceX / 2;
+			} else if (cssValues.x.toLowerCase() === 'right') {
+				res.posX = spaceX;
 			}
+		} else {
+			const spacePx = layout.toDevicePixels(spaceX);
+			res.posX = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValues.x.offset, 0, spacePx));
+		}
+
+		if (isString(cssValues.y)) {
+			if (cssValues.y.toLowerCase() === 'center') {
+				res.posY = spaceY / 2;
+			} else if (cssValues.y.toLowerCase() === 'bottom') {
+				res.posY = spaceY;
+			}
+		} else {
+			const spacePx = layout.toDevicePixels(spaceY);
+			res.posY = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValues.y.offset, 0, spacePx));
 		}
 	}
 
