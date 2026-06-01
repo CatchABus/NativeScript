@@ -23,9 +23,9 @@ export const importPattern = /('|")(.*?)\1/;
 export const MEDIA_QUERY_SEPARATOR = '&&';
 
 export abstract class AbstractCSSAdapter {
-	protected _ast: object;
+	protected readonly _ast: object;
 
-	public setAST(ast: object): void {
+	constructor(ast: object) {
 		this._ast = ast;
 	}
 

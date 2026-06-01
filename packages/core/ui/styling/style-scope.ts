@@ -84,13 +84,18 @@ class CSSSource {
 		this._file = file;
 		this._source = source;
 
-		if (!ast) {
+		if (ast) {
+			this._adapter = this._resolveAdapter(ast);
+		} else {
 			ast = this.parse();
+
+			// This is the default adapter when ast is not provided by bundler
+			if (ast) {
+				this._adapter = new CSSTreeAdapter(ast);
+			}
 		}
 
 		if (ast) {
-			this._adapter = this._resolveAdapter();
-			this._adapter.setAST(ast);
 			this.createSelectorsAndKeyframes();
 		} else {
 			this._selectors = [];
@@ -202,13 +207,13 @@ class CSSSource {
 		return this._source;
 	}
 
-	private _resolveAdapter(): AbstractCSSAdapter {
+	private _resolveAdapter(ast: object): AbstractCSSAdapter {
 		let adapter: AbstractCSSAdapter;
 
 		if (__CSS_PARSER__ === 'css-tree') {
-			adapter = new CSSTreeAdapter();
+			adapter = new CSSTreeAdapter(ast);
 		} else {
-			adapter = new DummyCSSAdapter();
+			adapter = new DummyCSSAdapter(ast);
 		}
 
 		return adapter;
@@ -251,6 +256,9 @@ class CSSSource {
 		const rulesets: RuleSet[] = [];
 		const keyframesRules: Keyframes[] = [];
 
+		this._selectors = rulesets;
+		this._keyframes = keyframesRules;
+
 		// When css2json-loader is enabled, imports are handled there and removed from AST rules
 		this._populateRulesFromImports(rulesets, keyframesRules);
 
@@ -277,9 +285,6 @@ class CSSSource {
 				}
 			}
 		}
-
-		this._selectors = rulesets;
-		this._keyframes = keyframesRules;
 	}
 
 	private _populateRulesFromImports(rulesets: RuleSet[], keyframes: Keyframes[]): void {
