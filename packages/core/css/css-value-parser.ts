@@ -30,10 +30,10 @@ export interface Background {
 	readonly size?: BackgroundSize;
 }
 export type BackgroundRepeat = 'repeat' | 'repeat-x' | 'repeat-y' | 'no-repeat';
+export type BackgroundSizeKeywords = 'cover' | 'contain';
 export type BackgroundSize =
+	| BackgroundSizeKeywords
 	| 'auto'
-	| 'cover'
-	| 'contain'
 	| {
 			x: 'auto' | LengthPercentage;
 			y: 'auto' | LengthPercentage;
@@ -240,35 +240,63 @@ export function parseAngle(value: string, start = 0): Parsed<Angle> {
 	return null;
 }
 
-const backgroundSizeKeywords = new Set(['auto', 'contain', 'cover']);
+const backgroundSizeKeywords = new Set(['contain', 'cover']);
 export function parseBackgroundSize(value: string, start = 0, keyword = parseKeyword(value, start)): Parsed<BackgroundSize> {
 	let end = start;
-	if (keyword && backgroundSizeKeywords.has(keyword.value)) {
+	let x: 'auto' | LengthPercentage;
+	let bgSize: Parsed<BackgroundSize>;
+
+	if (keyword) {
 		end = keyword.end;
-		const value = <'auto' | 'cover' | 'contain'>keyword.value;
 
-		return { start, end, value };
-	}
-
-	// Parse one or two lengths... the other will be "auto"
-	const firstLength = parsePercentageOrLength(value, end);
-	if (firstLength) {
-		end = firstLength.end;
-		const secondLength = parsePercentageOrLength(value, firstLength.end);
-		if (secondLength) {
-			end = secondLength.end;
-
+		if (backgroundSizeKeywords.has(keyword.value)) {
 			return {
 				start,
 				end,
-				value: { x: firstLength.value, y: secondLength.value },
+				value: <BackgroundSizeKeywords>keyword.value,
 			};
+		}
+
+		x = keyword.value === 'auto' ? keyword.value : null;
+	} else {
+		const firstLength = parsePercentageOrLength(value, end);
+		if (firstLength) {
+			end = firstLength.end;
+			x = firstLength.value;
 		} else {
-			return { start, end, value: { x: firstLength.value, y: 'auto' } };
+			x = null;
 		}
 	}
 
-	return null;
+	// Parse one or two lengths... the other will be "auto"
+	if (x != null) {
+		const secondLength = parsePercentageOrLength(value, end);
+		if (secondLength) {
+			end = secondLength.end;
+
+			bgSize = {
+				start,
+				end,
+				value: {
+					x,
+					y: secondLength.value,
+				},
+			};
+		} else {
+			bgSize = {
+				start,
+				end,
+				value: {
+					x,
+					y: 'auto',
+				},
+			};
+		}
+	} else {
+		bgSize = null;
+	}
+
+	return bgSize;
 }
 
 const backgroundPositionKeywords = Object.freeze(new Set(['left', 'right', 'top', 'bottom', 'center']));

@@ -681,6 +681,7 @@ backgroundRepeatProperty.register(Style);
 export const backgroundSizeProperty = new CssProperty<Style, string>({
 	name: 'backgroundSize',
 	cssName: 'background-size',
+	defaultValue: 'auto auto',
 	valueChanged: (target, oldValue, newValue) => {
 		target.backgroundInternal = target.backgroundInternal.withSize(newValue);
 	},

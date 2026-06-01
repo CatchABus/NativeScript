@@ -56,23 +56,22 @@ function toDevicePixelsCommon(length: CoreTypes.PercentLengthType, auto: number 
 	if (length == 'auto' || isCssWideKeyword(length)) {
 		return auto;
 	}
+
 	if (typeof length === 'number') {
 		return layout.round(layout.toDevicePixels(length));
 	}
+
 	if (!length) {
 		return auto;
 	}
-	// @ts-ignore
+
 	switch (length.unit) {
 		case 'px':
-			// @ts-ignore
 			return layout.round(length.value);
 		case '%':
-			// @ts-ignore
 			return layout.round(parentAvailableWidth * length.value);
 		case 'dip':
 		default:
-			// @ts-ignore
 			return layout.round(layout.toDevicePixels(length.value));
 	}
 }

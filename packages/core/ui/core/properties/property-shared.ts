@@ -1,5 +1,6 @@
 // Shared property types, interfaces, and value helpers for properties and view-base modules.
 // Only put platform-agnostic logic here.
+import type { CoreTypes } from '../../../core-types';
 
 /**
  * Value specifying that Property should be set to its initial value.
@@ -58,6 +59,6 @@ export function isResetValue(value: any): boolean {
 	return value === unsetValue || value === 'initial' || value === 'inherit' || isCssUnsetValue(value);
 }
 
-export function isCssWideKeyword(value: any): boolean {
+export function isCssWideKeyword(value: any): value is CoreTypes.CSSWideKeywords {
 	return value === 'initial' || value === 'inherit' || isCssUnsetValue(value);
 }

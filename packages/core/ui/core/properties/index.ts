@@ -5,7 +5,7 @@ import { Trace } from '../../../trace';
 import { Style } from '../../styling/style';
 
 import { profile } from '../../../profiling';
-import { unsetValue, PropertyOptions, CoerciblePropertyOptions, CssPropertyOptions, ShorthandPropertyOptions, CssAnimationPropertyOptions, isCssWideKeyword, isCssUnsetValue, isResetValue } from './property-shared';
+import { unsetValue, PropertyOptions, CoerciblePropertyOptions, CssPropertyOptions, ShorthandPropertyOptions, CssAnimationPropertyOptions, isResetValue } from './property-shared';
 import { calc } from '@csstools/css-calc';
 
 // Backwards compatibility

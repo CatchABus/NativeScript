@@ -463,11 +463,7 @@ function clearNonUniformBorders(nativeView: NativeScriptUIView): void {
 	nativeView.hasNonUniformBorder = false;
 }
 
-function getDrawParams(this: void, image: UIImage, background: BackgroundDefinition, width: number, height: number): BackgroundDrawParams {
-	if (!image) {
-		return null;
-	}
-
+function getDrawParams(imageWidth: number, imageHeight: number, background: BackgroundDefinition, width: number, height: number): BackgroundDrawParams {
 	const res: BackgroundDrawParams = {
 		repeatX: true,
 		repeatY: true,
@@ -495,22 +491,20 @@ function getDrawParams(this: void, image: UIImage, background: BackgroundDefinit
 		}
 	}
 
-	const imageSize = image.size;
-	let imageWidth = imageSize.width;
-	let imageHeight = imageSize.height;
-
 	// size
 	const parsedSize = background.size ? parseBackgroundSize(background.size) : null;
 	if (parsedSize) {
 		const cssValue = parsedSize.value;
 
 		if (isString(cssValue)) {
-			let scale = 0;
+			let scale: number;
 
 			if (cssValue === 'cover') {
 				scale = Math.max(width / imageWidth, height / imageHeight);
 			} else if (cssValue === 'contain') {
 				scale = Math.min(width / imageWidth, height / imageHeight);
+			} else {
+				scale = 1;
 			}
 
 			if (scale > 0) {
@@ -518,8 +512,11 @@ function getDrawParams(this: void, image: UIImage, background: BackgroundDefinit
 				imageHeight *= scale;
 			}
 		} else {
-			imageWidth = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.x, 0, width));
-			imageHeight = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.y, 0, height));
+			const autoX = layout.toDevicePixels(imageWidth);
+			const autoY = layout.toDevicePixels(imageHeight);
+
+			imageWidth = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.x, autoX, layout.toDevicePixels(width)));
+			imageHeight = layout.toDeviceIndependentPixels(PercentLength.toDevicePixels(cssValue.y, autoY, layout.toDevicePixels(height)));
 		}
 
 		res.sizeX = imageWidth;
@@ -570,10 +567,11 @@ function generatePatternImage(img: UIImage, view: View, flip?: boolean): UIImage
 	const frame = nativeView.frame;
 	const boundsWidth = view.scaleX ? frame.size.width / view.scaleX : frame.size.width;
 	const boundsHeight = view.scaleY ? frame.size.height / view.scaleY : frame.size.height;
+	const baseImgW = img.size.width;
+	const baseImgH = img.size.height;
+	const params = getDrawParams(baseImgW, baseImgH, background, boundsWidth, boundsHeight);
 
-	const params = getDrawParams(img, background, boundsWidth, boundsHeight);
-
-	if (params.sizeX > 0 && params.sizeY > 0) {
+	if ((params.sizeX > 0 || params.sizeY > 0) && (params.sizeX != baseImgW || params.sizeY != baseImgH)) {
 		const resizeRect = CGRectMake(0, 0, params.sizeX, params.sizeY);
 		UIGraphicsBeginImageContextWithOptions(resizeRect.size, false, 0.0);
 		img.drawInRect(resizeRect);
