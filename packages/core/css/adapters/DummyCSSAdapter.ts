@@ -8,7 +8,7 @@ export class DummyCSSAdapter extends AbstractCSSAdapter {
 		return null;
 	}
 
-	override createCSSDeclarations(_nodes: object[], _isKeyframeDeclaration: boolean): NSCssDeclaration[] {
+	override createCSSDeclarations(_nodes: object[]): NSCssDeclaration[] {
 		return null;
 	}
 

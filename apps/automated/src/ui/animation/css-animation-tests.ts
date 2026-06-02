@@ -184,13 +184,15 @@ export function test_ReadKeyframe() {
 		}`,
 		'test',
 	);
+	const propertyNames = Object.keys(animation.keyframes[0].propertyBag);
+
 	TKUnit.assert(animation !== undefined, 'CSS selector was not created!');
 	TKUnit.assertEqual(animation.name, 'test', 'Wrong animation name!');
 	TKUnit.assertEqual(animation.keyframes.length, 2, 'Keyframes not parsed correctly!');
 	TKUnit.assertEqual(animation.keyframes[0].duration, 0, 'First keyframe duration should be 0');
 	TKUnit.assertEqual(animation.keyframes[1].duration, 1, 'Second keyframe duration should be 1');
-	TKUnit.assertEqual(animation.keyframes[0].declarations.length, 1, 'Keyframe declarations are not correct');
-	TKUnit.assertEqual(animation.keyframes[0].declarations[0].property, 'backgroundColor', 'Keyframe declarations are not correct');
+	TKUnit.assertEqual(propertyNames.length, 1, 'Keyframe declarations are not correct');
+	TKUnit.assertEqual(propertyNames[0], 'backgroundColor', 'Keyframe declarations are not correct');
 }
 
 export function test_ReadTransformAllSet() {
@@ -201,16 +203,15 @@ export function test_ReadTransformAllSet() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const values = decl.value;
+	const { rotate, scale, translate } = animation.keyframes[0].propertyBag;
 
-	TKUnit.assertAreClose(values.rotate.z, 10, DELTA);
+	TKUnit.assertAreClose(rotate.z, 10, DELTA);
 
-	TKUnit.assertAreClose(values.scale.x, 5, SCALE_DELTA);
-	TKUnit.assertAreClose(values.scale.y, 1, SCALE_DELTA);
+	TKUnit.assertAreClose(scale.x, 5, SCALE_DELTA);
+	TKUnit.assertAreClose(scale.y, 1, SCALE_DELTA);
 
-	TKUnit.assertAreClose(values.translate.x, 100, DELTA);
-	TKUnit.assertAreClose(values.translate.y, 200, DELTA);
+	TKUnit.assertAreClose(translate.x, 100, DELTA);
+	TKUnit.assertAreClose(translate.y, 200, DELTA);
 }
 
 export function test_ReadTransformNone() {
@@ -221,16 +222,15 @@ export function test_ReadTransformNone() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const values = decl.value;
+	const { rotate, scale, translate } = animation.keyframes[0].propertyBag;
 
-	TKUnit.assertEqual(values.rotate.z, 0);
+	TKUnit.assertEqual(rotate.z, 0);
 
-	TKUnit.assertEqual(values.scale.x, 1);
-	TKUnit.assertEqual(values.scale.y, 1);
+	TKUnit.assertEqual(scale.x, 1);
+	TKUnit.assertEqual(scale.y, 1);
 
-	TKUnit.assert(values.translate.x === 0);
-	TKUnit.assert(values.translate.y === 0);
+	TKUnit.assert(translate.x === 0);
+	TKUnit.assert(translate.y === 0);
 }
 
 export function test_ReadScale() {
@@ -241,12 +241,11 @@ export function test_ReadScale() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.x, -5, DELTA);
-	TKUnit.assertAreClose(scale.y, 12.3, DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.x, -5, DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.y, 12.3, DELTA);
 }
 
 export function test_ReadScaleSingle() {
@@ -257,12 +256,11 @@ export function test_ReadScaleSingle() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.x, 2, DELTA);
-	TKUnit.assertAreClose(scale.y, 2, DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.x, 2, DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.y, 2, DELTA);
 }
 
 export function test_ReadScaleXY() {
@@ -273,12 +271,11 @@ export function test_ReadScaleXY() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.x, 5, SCALE_DELTA);
-	TKUnit.assertAreClose(scale.y, 10, SCALE_DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.x, 5, SCALE_DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.y, 10, SCALE_DELTA);
 }
 
 export function test_ReadScaleX() {
@@ -289,13 +286,12 @@ export function test_ReadScaleX() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.x, 12.5, SCALE_DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.x, 12.5, SCALE_DELTA);
 	// y defaults to 1
-	TKUnit.assertAreClose(scale.y, 1, SCALE_DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.y, 1, SCALE_DELTA);
 }
 
 export function test_ReadScaleY() {
@@ -306,13 +302,12 @@ export function test_ReadScaleY() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.y, 10, SCALE_DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.y, 10, SCALE_DELTA);
 	// x defaults to 1
-	TKUnit.assertAreClose(scale.x, 1, SCALE_DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.x, 1, SCALE_DELTA);
 }
 
 export function test_ReadScale3d() {
@@ -323,12 +318,11 @@ export function test_ReadScale3d() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const scale = decl.value.scale;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(scale.x, 10, SCALE_DELTA);
-	TKUnit.assertAreClose(scale.y, 20, SCALE_DELTA);
+	TKUnit.assertTrue('scale' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.scale.x, 10, SCALE_DELTA);
+	TKUnit.assertAreClose(propertyBag.scale.y, 20, SCALE_DELTA);
 }
 
 export function test_ReadTranslate() {
@@ -339,12 +333,11 @@ export function test_ReadTranslate() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.x, 100, DELTA);
-	TKUnit.assertAreClose(translate.y, 20, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.x, 100, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.y, 20, DELTA);
 }
 
 export function test_ReadTranslateSingle() {
@@ -355,12 +348,11 @@ export function test_ReadTranslateSingle() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.x, 30, DELTA);
-	TKUnit.assertAreClose(translate.y, 0, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.x, 30, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.y, 0, DELTA);
 }
 
 export function test_ReadTranslateXY() {
@@ -371,12 +363,11 @@ export function test_ReadTranslateXY() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.x, 5, DELTA);
-	TKUnit.assertAreClose(translate.y, 10, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.x, 5, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.y, 10, DELTA);
 }
 
 export function test_ReadTranslateX() {
@@ -387,13 +378,12 @@ export function test_ReadTranslateX() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.x, 12.5, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.x, 12.5, DELTA);
 	// y defaults to 0
-	TKUnit.assertAreClose(translate.y, 0, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.y, 0, DELTA);
 }
 
 export function test_ReadTranslateY() {
@@ -404,13 +394,12 @@ export function test_ReadTranslateY() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.y, 10, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.y, 10, DELTA);
 	// x defaults to 0
-	TKUnit.assertAreClose(translate.x, 0, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.x, 0, DELTA);
 }
 
 export function test_ReadTranslate3d() {
@@ -421,12 +410,11 @@ export function test_ReadTranslate3d() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const translate = decl.value.translate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(translate.x, 10, DELTA);
-	TKUnit.assertAreClose(translate.y, 20, DELTA);
+	TKUnit.assertTrue('translate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.translate.x, 10, DELTA);
+	TKUnit.assertAreClose(propertyBag.translate.y, 20, DELTA);
 }
 
 export function test_ReadRotate() {
@@ -437,11 +425,10 @@ export function test_ReadRotate() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const rotate = decl.value.rotate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(rotate.z, 5, DELTA);
+	TKUnit.assertTrue('rotate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.rotate.z, 5, DELTA);
 }
 
 export function test_ReadRotateDeg() {
@@ -452,11 +439,10 @@ export function test_ReadRotateDeg() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const rotate = decl.value.rotate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(rotate.z, 45, DELTA);
+	TKUnit.assertTrue('rotate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.rotate.z, 45, DELTA);
 }
 
 export function test_ReadRotateRad() {
@@ -467,11 +453,10 @@ export function test_ReadRotateRad() {
 		}`,
 		'test',
 	);
-	const decl = animation.keyframes[0].declarations[0];
-	const rotate = decl.value.rotate;
+	const { propertyBag } = animation.keyframes[0];
 
-	TKUnit.assertEqual(decl.property, 'transform');
-	TKUnit.assertAreClose(rotate.z, 45, DELTA);
+	TKUnit.assertTrue('rotate' in propertyBag);
+	TKUnit.assertAreClose(propertyBag.rotate.z, 45, DELTA);
 }
 
 export function test_ReadAnimationWithUnsortedKeyframes() {
@@ -486,12 +471,12 @@ export function test_ReadAnimationWithUnsortedKeyframes() {
 		'test',
 	);
 	TKUnit.assertEqual(animation.keyframes.length, 6);
-	TKUnit.assertEqual(animation.keyframes[0].declarations[0].value, 0);
-	TKUnit.assertEqual(animation.keyframes[1].declarations[0].value, 0.5);
-	TKUnit.assertEqual(animation.keyframes[2].declarations[0].value, 0.3);
-	TKUnit.assertEqual(animation.keyframes[3].declarations[0].value, 0.5);
-	TKUnit.assertEqual(animation.keyframes[4].declarations[0].value, 0.3);
-	TKUnit.assertEqual(animation.keyframes[5].declarations[0].value, 1);
+	TKUnit.assertEqual(animation.keyframes[0].propertyBag.opacity, 0);
+	TKUnit.assertEqual(animation.keyframes[1].propertyBag.opacity, 0.5);
+	TKUnit.assertEqual(animation.keyframes[2].propertyBag.opacity, 0.3);
+	TKUnit.assertEqual(animation.keyframes[3].propertyBag.opacity, 0.5);
+	TKUnit.assertEqual(animation.keyframes[4].propertyBag.opacity, 0.3);
+	TKUnit.assertEqual(animation.keyframes[5].propertyBag.opacity, 1);
 	TKUnit.assertEqual(animation.keyframes[0].duration, 0);
 	TKUnit.assertEqual(animation.keyframes[1].duration, 0.2);
 	TKUnit.assertEqual(animation.keyframes[2].duration, 0.4);
@@ -504,7 +489,7 @@ export function test_ReadAnimationsWithCSSImport() {
 	let css = "@import 'ui/animation/test-page.css'; .test { animation-name: test-page-keyframes; }";
 	let animation = createAnimationFromCSS(css, 'test');
 	TKUnit.assertEqual(animation.keyframes.length, 3);
-	TKUnit.assertEqual(animation.keyframes[1].declarations[0].property, 'backgroundColor');
+	TKUnit.assertTrue('backgroundColor' in animation.keyframes[1].propertyBag);
 }
 
 export function test_LoadTwoAnimationsWithTheSameName() {
@@ -521,7 +506,7 @@ export function test_LoadTwoAnimationsWithTheSameName() {
 		'a',
 	);
 	TKUnit.assertEqual(animation.keyframes.length, 2);
-	TKUnit.assertEqual(animation.keyframes[1].declarations[0].value, 0.5);
+	TKUnit.assertEqual(animation.keyframes[1].propertyBag.opacity, 0.5);
 
 	const animation2 = createAnimationFromCSS(
 		`.a {
@@ -553,8 +538,8 @@ export function test_LoadAnimationProgrammatically() {
 		}`;
 		let animation = page.getKeyframeAnimationWithName('a');
 		TKUnit.assertEqual(animation.keyframes.length, 2);
-		TKUnit.assertEqual(animation.keyframes[1].declarations[0].property, 'opacity');
-		TKUnit.assertEqual(animation.keyframes[1].declarations[0].value, 0);
+		TKUnit.assertTrue('opacity' in animation.keyframes[1].propertyBag);
+		TKUnit.assertEqual(animation.keyframes[1].propertyBag.opacity, 0);
 	});
 }
 
@@ -570,7 +555,7 @@ export function test_LoadMatchingMediaQueryKeyframeAnimation() {
 		'a',
 	);
 	TKUnit.assertEqual(animation.keyframes.length, 2);
-	TKUnit.assertEqual(animation.keyframes[1].declarations[0].value, 1);
+	TKUnit.assertEqual(animation.keyframes[1].propertyBag.opacity, 1);
 }
 
 export function test_IgnoreNonMatchingMediaQueryKeyframe() {
@@ -601,7 +586,7 @@ export function test_LoadMatchingNestedMediaQueryKeyframeAnimation() {
 		'a',
 	);
 	TKUnit.assertEqual(animation.keyframes.length, 2);
-	TKUnit.assertEqual(animation.keyframes[1].declarations[0].value, 1);
+	TKUnit.assertEqual(animation.keyframes[1].propertyBag.opacity, 1);
 }
 
 export function test_IgnoreNonMatchingNestedMediaQueryKeyframe() {
@@ -700,6 +685,6 @@ export function test_AnimationCurveInKeyframes() {
 	TKUnit.assertEqual(animation.keyframes[1].curve, undefined);
 	TKUnit.assertEqual(animation.keyframes[1].curve, undefined);
 	let realAnimation = keyframeAnimation.KeyframeAnimation.keyframeAnimationFromInfo(animation);
-	TKUnit.assertEqual(realAnimation.animations[1].curve, CoreTypes.AnimationCurve.linear);
-	TKUnit.assertEqual(realAnimation.animations[2].curve, CoreTypes.AnimationCurve.easeIn);
+	TKUnit.assertEqual(realAnimation.animationsInfo[1].curve, CoreTypes.AnimationCurve.linear);
+	TKUnit.assertEqual(realAnimation.animationsInfo[2].curve, CoreTypes.AnimationCurve.easeIn);
 }

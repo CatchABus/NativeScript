@@ -10,7 +10,7 @@ import { File, knownFolders, path } from '../../file-system';
 import { Application, CssChangedEventData, LoadAppCSSEventData } from '../../application';
 import { profile } from './styling-profile';
 
-import { KeyframeAnimationInfo, KeyframeAnimation } from '../animation/keyframe-animation';
+import { KeyframeAnimationInfo, KeyframeAnimation, Keyframes } from '../animation/keyframe-animation';
 
 import { CssAnimationParser } from './css-animation-parser';
 import { sanitizeModuleName } from '../../utils/common';
@@ -20,7 +20,6 @@ import { AbstractCSSAdapter } from '../../css/adapters/AbstractCSSAdapter';
 import { DummyCSSAdapter } from '../../css/adapters/DummyCSSAdapter';
 import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
 import { parseCSSStyleSheet } from '../../css/css-parser';
-import { Keyframes } from '../animation/animation-shared';
 
 let mergedApplicationCssSelectors: RuleSet[] = [];
 let applicationCssSelectors: RuleSet[] = [];

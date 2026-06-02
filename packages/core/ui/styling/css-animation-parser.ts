@@ -1,11 +1,10 @@
 import { CssAnimationProperty } from '../core/properties';
 
-import { KeyframeAnimationInfo } from '../animation/keyframe-animation';
+import { KeyframeAnimationInfo, KeyframeInfo, KeyframePropertyBag } from '../animation/keyframe-animation';
 import { timeConverter, animationTimingFunctionConverter } from '../styling/converters';
 
 import { transformConverter } from '../styling/css-transform';
 import { NSCssDeclaration, NSCSSKeyframe } from '../../css/adapters/AbstractCSSAdapter';
-import { KeyframeInfo } from '../animation/animation-shared';
 
 const ANIMATION_PROPERTY_HANDLERS = Object.freeze({
 	'animation-name': (info: any, value: any) => (info.name = value.replace(/['"]/g, '')),
@@ -50,7 +49,7 @@ export class CssAnimationParser {
 		};
 
 		for (const keyframe of keyframes) {
-			convertKeyframeDeclarationValues(keyframe.declarations);
+			const propertyBag = createKeyframePropertyBag(keyframe.declarations);
 
 			for (const value of keyframe.values) {
 				let time: number;
@@ -73,9 +72,12 @@ export class CssAnimationParser {
 				if (!current) {
 					current = {
 						duration: time,
-						declarations: [],
+						propertyBag,
 					};
 					parsedKeyframes[time] = current;
+				} else {
+					// For cases with duplicate keyframe states (e.g. 2 of 50%)
+					Object.assign(current.propertyBag, propertyBag);
 				}
 
 				for (const declaration of keyframe.declarations) {
@@ -83,7 +85,6 @@ export class CssAnimationParser {
 						current.curve = animationTimingFunctionConverter(declaration.value);
 					}
 				}
-				current.declarations = current.declarations.concat(keyframe.declarations);
 			}
 		}
 
@@ -180,16 +181,25 @@ export function keyframeAnimationsFromCSSProperty(value: any, animations: Keyfra
 	}
 }
 
-export function convertKeyframeDeclarationValues(declarations: NSCssDeclaration[]): void {
+export function createKeyframePropertyBag(declarations: NSCssDeclaration[]): KeyframePropertyBag {
+	const propertyBag = {};
+
 	for (let i = 0, length = declarations.length; i < length; i++) {
 		const decl = declarations[i];
+
+		// Declarations in a keyframe qualified with the important flag set are ignored
+		if (decl.important) {
+			continue;
+		}
+
 		const propertyInstance = CssAnimationProperty._getByCssName(decl.property);
 
 		if (propertyInstance?._valueConverter) {
-			decl.property = propertyInstance.name;
-			decl.value = propertyInstance._valueConverter(decl.value);
+			propertyBag[propertyInstance.name] = propertyInstance._valueConverter(decl.value);
 		} else if (decl.property === 'transform') {
-			decl.value = transformConverter(decl.value);
+			Object.assign(propertyBag, transformConverter(decl.value));
 		}
 	}
+
+	return propertyBag;
 }

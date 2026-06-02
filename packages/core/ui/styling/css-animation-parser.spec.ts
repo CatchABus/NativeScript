@@ -1,9 +1,8 @@
 import { CoreTypes } from '../../core-types';
-import type { KeyframeAnimationInfo, KeyframeInfo } from '../animation';
 import { CssAnimationParser, keyframeAnimationsFromCSSProperty } from './css-animation-parser';
 import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
-import { Keyframes } from '../animation/keyframe-animation';
 import { parseCSSStyleSheet } from '../../css/css-parser';
+import type { KeyframeAnimationInfo, KeyframeInfo, Keyframes } from '../animation/keyframe-animation';
 
 function getCurves() {
 	return {
@@ -279,10 +278,12 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(1);
 
 			const [from] = res;
+			const propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
 		});
 
 		it('parses "to" keyframes', () => {
@@ -296,10 +297,12 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(1);
 
 			const [to] = res;
+			const propertyNames = Object.keys(to.propertyBag);
+
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses "from/to" keyframes', () => {
@@ -314,15 +317,19 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(2);
 
 			const [from, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses "0%" keyframes', () => {
@@ -336,10 +343,12 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(1);
 
 			const [from] = res;
+			const propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
 		});
 
 		it('parses "100%" keyframes', () => {
@@ -353,10 +362,12 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(1);
 
 			const [to] = res;
+			const propertyNames = Object.keys(to.propertyBag);
+
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses "0%/100%" keyframes', () => {
@@ -371,15 +382,19 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(2);
 
 			const [from, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses "via" keyframes', () => {
@@ -393,10 +408,12 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(1);
 
 			const [via] = res;
+			const propertyNames = Object.keys(via.propertyBag);
+
 			expect(via.duration).toBe(0.5);
-			expect(via.declarations.length).toBe(1);
-			expect(via.declarations[0].property).toBe('opacity');
-			expect(via.declarations[0].value).toBe(0.5);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(via.propertyBag.opacity).toBe(0.5);
 		});
 
 		it('parses multiple keyframes', () => {
@@ -412,20 +429,26 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(3);
 
 			const [from, via, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(via.propertyBag);
 
 			expect(via.duration).toBe(0.5);
-			expect(via.declarations.length).toBe(1);
-			expect(via.declarations[0].property).toBe('opacity');
-			expect(via.declarations[0].value).toBe(0.5);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(via.propertyBag.opacity).toBe(0.5);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses multiple keyframes with mixed stops', () => {
@@ -441,20 +464,26 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(3);
 
 			const [from, via, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(via.propertyBag);
 
 			expect(via.duration).toBe(0.5);
-			expect(via.declarations.length).toBe(1);
-			expect(via.declarations[0].property).toBe('opacity');
-			expect(via.declarations[0].value).toBe(0.5);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(via.propertyBag.opacity).toBe(0.5);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses duplicate keyframes', () => {
@@ -471,22 +500,28 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(3);
 
 			const [from, via, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(via.propertyBag);
 
 			expect(via.duration).toBe(0.5);
-			expect(via.declarations.length).toBe(2);
-			expect(via.declarations[0].property).toBe('opacity');
-			expect(via.declarations[0].value).toBe(0.5);
-			expect(via.declarations[1].property).toBe('translateX');
-			expect(via.declarations[1].value).toBe(100);
+			expect(propertyNames.length).toBe(2);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(via.propertyBag.opacity).toBe(0.5);
+			expect(propertyNames[1]).toBe('translateX');
+			expect(via.propertyBag.translateX).toBe(100);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 
 		it('parses timing functions in keyframes', () => {
@@ -518,20 +553,26 @@ describe('css-animation-parser', () => {
 			expect(res.length).toBe(3);
 
 			const [from, via, to] = res;
+			let propertyNames = Object.keys(from.propertyBag);
+
 			expect(from.duration).toBe(0);
-			expect(from.declarations.length).toBe(1);
-			expect(from.declarations[0].property).toBe('opacity');
-			expect(from.declarations[0].value).toBe(0);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(from.propertyBag.opacity).toBe(0);
+
+			propertyNames = Object.keys(via.propertyBag);
 
 			expect(via.duration).toBe(0.5);
-			expect(via.declarations.length).toBe(1);
-			expect(via.declarations[0].property).toBe('opacity');
-			expect(via.declarations[0].value).toBe(0.5);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(via.propertyBag.opacity).toBe(0.5);
+
+			propertyNames = Object.keys(to.propertyBag);
 
 			expect(to.duration).toBe(1);
-			expect(to.declarations.length).toBe(1);
-			expect(to.declarations[0].property).toBe('opacity');
-			expect(to.declarations[0].value).toBe(1);
+			expect(propertyNames.length).toBe(1);
+			expect(propertyNames[0]).toBe('opacity');
+			expect(to.propertyBag.opacity).toBe(1);
 		});
 	});
 });

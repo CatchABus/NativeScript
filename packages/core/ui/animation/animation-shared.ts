@@ -4,7 +4,6 @@
 import type { View } from '../core/view';
 import type { CoreTypes } from '../../core-types';
 import type { Color } from '../../color';
-import { NSCssDeclaration, NSCSSKeyframe } from '../../css/adapters/AbstractCSSAdapter';
 
 export type Transformation = {
 	property: TransformationType;
@@ -85,20 +84,6 @@ export interface PropertyAnimationInfo extends PropertyAnimation {
 
 export interface AnimationDefinitionInternal extends AnimationDefinition {
 	valueSource?: 'animation' | 'keyframe';
-}
-
-export interface Keyframes {
-	name: string;
-	keyframes: Array<NSCSSKeyframe>;
-	tag?: string | number;
-	scopedTag?: string;
-	mediaQueryString?: string;
-}
-
-export interface KeyframeInfo {
-	duration: number;
-	declarations: Array<NSCssDeclaration>;
-	curve?: any;
 }
 
 export interface IOSView extends View {

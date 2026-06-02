@@ -57,7 +57,7 @@ export class CSSTreeAdapter extends AbstractCSSAdapter {
 				if (node.prelude.type === 'Raw') {
 					if (isFunction(handler.onRule)) {
 						const selectors = node.prelude.value.split(',').map((value) => value.trim());
-						const declarations: NSCssDeclaration[] = this.createCSSDeclarations(node.block.children, false);
+						const declarations: NSCssDeclaration[] = this.createCSSDeclarations(node.block.children);
 
 						handler.onRule(selectors, declarations, mediaQueryString);
 					}
@@ -68,19 +68,13 @@ export class CSSTreeAdapter extends AbstractCSSAdapter {
 		}
 	}
 
-	override createCSSDeclarations(nodes: CssNodePlain[], isKeyframeDeclaration: boolean): NSCssDeclaration[] {
+	override createCSSDeclarations(nodes: CssNodePlain[]): NSCssDeclaration[] {
 		const declarations: NSCssDeclaration[] = [];
 
 		for (const decl of nodes) {
 			if (this.isDeclaration(decl)) {
 				if (decl.value.type === 'Raw') {
 					const important = typeof decl.important === 'string' ? decl.important.trim().toLowerCase() === 'important' : decl.important;
-
-					// Declarations in a keyframe qualified with the important flag set are ignored.
-					if (isKeyframeDeclaration && important) {
-						continue;
-					}
-
 					const cssDecl: NSCssDeclaration = {
 						property: decl.property.startsWith('--') ? decl.property : decl.property.toLowerCase(),
 						value: decl.value.value ? decl.value.value.trim() : decl.value.value,
@@ -108,7 +102,7 @@ export class CSSTreeAdapter extends AbstractCSSAdapter {
 				if (node.prelude.type === 'Raw') {
 					keyframes.push({
 						values: node.prelude.value.split(',').map((value) => value.trim()),
-						declarations: this.createCSSDeclarations(node.block.children, true),
+						declarations: this.createCSSDeclarations(node.block.children),
 					});
 				} else {
 					console.error('Unsupported css keyframe type: ' + node.prelude.type);

@@ -1,6 +1,6 @@
 export interface NSCssDeclaration {
 	property: string;
-	value: any;
+	value: string;
 	important?: boolean;
 }
 
@@ -31,7 +31,7 @@ export abstract class AbstractCSSAdapter {
 
 	abstract parseCSSRules(handler: AstRuleHandler): void;
 	abstract parseCSSImports(): NSCSSImport[];
-	abstract createCSSDeclarations(nodes: object[], isKeyframeDeclaration: boolean): NSCssDeclaration[];
+	abstract createCSSDeclarations(nodes: object[]): NSCssDeclaration[];
 	abstract createCSSKeyframes(nodes: object[]): NSCSSKeyframe[];
 	abstract isRule(node: object): boolean;
 	abstract isAtRule(node: object): boolean;
