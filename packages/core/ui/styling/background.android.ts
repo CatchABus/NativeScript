@@ -129,17 +129,15 @@ function getNativeBackgroundSize(value: string): androidNative.Array<org.natives
 		nativeArray = Array.create(org.nativescript.widgets.CSSValue, 2);
 
 		if (x === 'auto') {
-			nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', x, null, null);
+			nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', x, '', 0);
 		} else {
-			const unit = x.unit === 'dip' ? '' : x.unit;
-			nativeArray[0] = new org.nativescript.widgets.CSSValue('number', x.value + unit, unit, x.value);
+			nativeArray[0] = new org.nativescript.widgets.CSSValue('number', x.value + x.unit, x.unit, x.value);
 		}
 
 		if (y === 'auto') {
-			nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', y, null, null);
+			nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', y, '', 0);
 		} else {
-			const unit = y.unit === 'dip' ? '' : y.unit;
-			nativeArray[1] = new org.nativescript.widgets.CSSValue('number', y.value + unit, unit, y.value);
+			nativeArray[1] = new org.nativescript.widgets.CSSValue('number', y.value + y.unit, y.unit, y.value);
 		}
 	}
 
@@ -160,7 +158,7 @@ function getNativeBackgroundPosition(value: string): androidNative.Array<org.nat
 	const nativeArray = Array.create(org.nativescript.widgets.CSSValue, 2);
 
 	if (isString(cssValues.x)) {
-		nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', cssValues.x, null, null);
+		nativeArray[0] = new org.nativescript.widgets.CSSValue('ident', cssValues.x, '', 0);
 	} else {
 		const { offset } = cssValues.x;
 		const unit = offset.unit === 'dip' ? '' : offset.unit;
@@ -168,7 +166,7 @@ function getNativeBackgroundPosition(value: string): androidNative.Array<org.nat
 	}
 
 	if (isString(cssValues.y)) {
-		nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', cssValues.y, null, null);
+		nativeArray[1] = new org.nativescript.widgets.CSSValue('ident', cssValues.y, '', 0);
 	} else {
 		const { offset } = cssValues.y;
 		const unit = offset.unit === 'dip' ? '' : offset.unit;

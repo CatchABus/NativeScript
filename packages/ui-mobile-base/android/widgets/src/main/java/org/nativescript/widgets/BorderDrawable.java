@@ -367,13 +367,16 @@ public class BorderDrawable extends ColorDrawable implements BitmapOwner {
 		if (this.backgroundBitmap != null) {
 			BackgroundDrawParams params = this.getDrawParams(width, height);
 			Matrix transform = new Matrix();
-			if (params.sizeX > 0 && params.sizeY > 0) {
-				float scaleX = params.sizeX / this.backgroundBitmap.getWidth();
-				float scaleY = params.sizeY / this.backgroundBitmap.getHeight();
+			int bitmapWidth = this.backgroundBitmap.getWidth();
+			int bitmapHeight = this.backgroundBitmap.getHeight();
+
+			if ((params.sizeX > 0 || params.sizeY > 0) && (params.sizeX != bitmapWidth || params.sizeY != bitmapHeight)) {
+				float scaleX = params.sizeX / bitmapWidth;
+				float scaleY = params.sizeY / bitmapHeight;
 				transform.setScale(scaleX, scaleY, 0, 0);
 			} else {
-				params.sizeX = this.backgroundBitmap.getWidth();
-				params.sizeY = this.backgroundBitmap.getHeight();
+				params.sizeX = bitmapWidth;
+				params.sizeY = bitmapHeight;
 			}
 			transform.postTranslate(params.posX, params.posY);
 
@@ -713,82 +716,67 @@ public class BorderDrawable extends ColorDrawable implements BitmapOwner {
 
 		// size
 		if (this.backgroundSize != null && !this.backgroundSize.isEmpty()) {
-			if (this.backgroundSizeParsedCSSValues.length == 2) {
-				CSSValue vx = this.backgroundSizeParsedCSSValues[0];
-				CSSValue vy = this.backgroundSizeParsedCSSValues[1];
-				if ("%".equals(vx.getUnit()) && "%".equals(vy.getUnit())) {
-					imageWidth = width * vx.getValue() / 100;
-					imageHeight = height * vy.getValue() / 100;
+			CSSValue[] cssValues = this.backgroundSizeParsedCSSValues;
+			if (cssValues != null) {
+				CSSValue xVal = cssValues[0];
+				CSSValue yVal = cssValues[1];
 
-					res.sizeX = imageWidth;
-					res.sizeY = imageHeight;
-				} else if ("number".equals(vx.getType()) && "number".equals(vy.getType()) &&
-					(("px".equals(vx.getUnit()) && "px".equals(vy.getUnit())) || ((vx.getUnit() == null || vx.getUnit().isEmpty()) && (vy.getUnit() == null || vy.getUnit().isEmpty())))) {
-					imageWidth = vx.getValue();
-					imageHeight = vy.getValue();
+				if (cssValues.length == 1) {
+					float scale;
 
-					res.sizeX = imageWidth;
-					res.sizeY = imageHeight;
-				}
-			} else if (this.backgroundSizeParsedCSSValues.length == 1 && "ident".equals(this.backgroundSizeParsedCSSValues[0].getType())) {
-				float scale = 0;
+					if (xVal.getString().equalsIgnoreCase("cover")) {
+						scale = Math.max(width / imageWidth, height / imageHeight);
+					} else if (xVal.getString().equalsIgnoreCase("contain")) {
+						scale = Math.min(width / imageWidth, height / imageHeight);
+					} else {
+						scale = 1;
+					}
 
-				if ("cover".equals(this.backgroundSizeParsedCSSValues[0].getString())) {
-					scale = Math.max(width / imageWidth, height / imageHeight);
-				} else if ("contain".equals(this.backgroundSizeParsedCSSValues[0].getString())) {
-					scale = Math.min(width / imageWidth, height / imageHeight);
-				}
-
-				if (scale > 0) {
-					imageWidth *= scale;
-					imageHeight *= scale;
-
-					res.sizeX = imageWidth;
-					res.sizeY = imageHeight;
+					if (scale > 0) {
+						imageWidth *= scale;
+						imageHeight *= scale;
+					}
+				} else if (cssValues.length == 2) {
+					if (!xVal.getString().equalsIgnoreCase("auto")) {
+						imageWidth = cssValueToDevicePixels(xVal.getValue(), xVal.getUnit(), width, this.density);
+					}
+					if (!yVal.getString().equalsIgnoreCase("auto")) {
+						imageHeight = cssValueToDevicePixels(yVal.getValue(), yVal.getUnit(), height, this.density);
+					}
 				}
 			}
+
+			res.sizeX = imageWidth;
+			res.sizeY = imageHeight;
 		}
 
 		// position
 		if (this.backgroundPosition != null && !this.backgroundPosition.isEmpty()) {
-			CSSValue[] xy = parsePosition(this.backgroundPositionParsedCSSValues);
-			if (xy != null) {
-				CSSValue vx = xy[0];
-				CSSValue vy = xy[1];
+			CSSValue[] cssValues = this.backgroundPositionParsedCSSValues;
+			if (cssValues != null && cssValues.length == 2) {
+				CSSValue xVal = cssValues[0];
+				CSSValue yVal = cssValues[1];
 				float spaceX = width - imageWidth;
 				float spaceY = height - imageHeight;
 
-				if ("%".equals(vx.getUnit()) && "%".equals(vy.getUnit())) {
-					res.posX = spaceX * vx.getValue() / 100;
-					res.posY = spaceY * vy.getValue() / 100;
-				} else if ("number".equals(vx.getType()) && "number".equals(vy.getType()) &&
-					(("px".equals(vx.getUnit()) && "px".equals(vy.getUnit())) || ((vx.getUnit() == null || vx.getUnit().isEmpty()) && (vy.getUnit() == null || vy.getUnit().isEmpty())))) {
-					res.posX = vx.getValue();
-					res.posY = vy.getValue();
-				} else if ("ident".equals(vx.getType()) && "ident".equals(vy.getType())) {
-					if ("center".equals(vx.getString().toLowerCase(Locale.ENGLISH))) {
+				if (xVal.getType().equalsIgnoreCase("ident")) {
+					if (xVal.getString().equalsIgnoreCase("center")) {
 						res.posX = spaceX / 2;
-					} else if ("right".equals(vx.getString().toLowerCase(Locale.ENGLISH))) {
+					} else if (xVal.getString().equalsIgnoreCase("right")) {
 						res.posX = spaceX;
 					}
+				} else {
+					res.posX = cssValueToDevicePixels(xVal.getValue(), xVal.getUnit(), spaceX, this.density);
+				}
 
-					if ("center".equals(vy.getString().toLowerCase(Locale.ENGLISH))) {
+				if (yVal.getType().equalsIgnoreCase("ident")) {
+					if (yVal.getString().equalsIgnoreCase("center")) {
 						res.posY = spaceY / 2;
-					} else if ("bottom".equals(vy.getString().toLowerCase(Locale.ENGLISH))) {
+					} else if (yVal.getString().equalsIgnoreCase("bottom")) {
 						res.posY = spaceY;
 					}
-				} else if ("number".equals(vx.getType()) && "ident".equals(vy.getType())) {
-					if ("%".equals(vx.getUnit())) {
-						res.posX = spaceX * vx.getValue() / 100;
-					} else if ("px".equals(vx.getUnit()) || vx.getUnit() == null || vx.getUnit().isEmpty()) {
-						res.posX = vx.getValue();
-					}
-
-					if ("center".equals(vy.getString().toLowerCase(Locale.ENGLISH))) {
-						res.posY = spaceY / 2;
-					} else if ("bottom".equals(vy.getString().toLowerCase(Locale.ENGLISH))) {
-						res.posY = spaceY;
-					}
+				} else {
+					res.posY = cssValueToDevicePixels(yVal.getValue(), yVal.getUnit(), spaceY, this.density);
 				}
 			}
 		}
@@ -796,49 +784,38 @@ public class BorderDrawable extends ColorDrawable implements BitmapOwner {
 		return res;
 	}
 
-	private static CSSValue[] parsePosition(CSSValue[] values) {
-		if (values.length == 2) {
-			return values;
+	private static float cssValueToDevicePixels(String source, float total, float density) {
+		float value;
+		String unit;
+		int index;
+
+		source = source.toLowerCase().trim();
+
+		if ((index = source.indexOf("%")) > -1 || (index = source.indexOf("px")) > -1 || (index = source.indexOf("dip")) > -1) {
+			value = Float.parseFloat(source.substring(0, index));
+			unit = source.substring(index);
+		} else {
+			value = Float.parseFloat(source);
+			unit = "";
 		}
 
-		CSSValue[] result = null;
-		if (values.length == 1) {
-			// If you only one keyword is specified, the other value is "center"
-			CSSValue center = new CSSValue("ident", "center", null, 0);
-
-			if ("ident".equals(values[0].getType())) {
-				String val = values[0].getString().toLowerCase(Locale.ENGLISH);
-
-				switch (val) {
-					case "left":
-					case "right":
-						result = new CSSValue[]{values[0], center};
-						break;
-					case "top":
-					case "bottom":
-						result = new CSSValue[]{center, values[0]};
-						break;
-					case "center":
-						result = new CSSValue[]{center, center};
-						break;
-				}
-			} else if ("number".equals(values[0].getType())) {
-				result = new CSSValue[]{values[0], center};
-			}
-		}
-
-		return result;
+		return cssValueToDevicePixels(value, unit, total, density);
 	}
 
-	private static float cssValueToDevicePixels(String source, float total, float density) {
-		source = source.trim();
-		if (source.contains("%")) {
-			return Float.parseFloat(source.replace("%", "")) * total / 100;
-		} else if (source.contains("px")) {
-			return Float.parseFloat(source.replace("px", "")) * density;
+	private static float cssValueToDevicePixels(float value, String unit, float total, float density) {
+		float pxValue;
+
+		unit = unit.trim();
+
+		if (unit.equals("%")) {
+			pxValue = value * total / 100;
+		} else if (unit.equalsIgnoreCase("px")) {
+			pxValue = value;
 		} else {
-			return Float.parseFloat(source) * density;
+			pxValue = value * density;
 		}
+
+		return pxValue;
 	}
 
 	public String toDebugString() {
