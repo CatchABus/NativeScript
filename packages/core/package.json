@@ -68,6 +68,7 @@
 		"css-tree": "^3.2.1",
 		"css-what": "^7.0.0",
 		"emoji-regex": "^10.2.1",
+		"inline-style-parser": "^0.2.7",
 		"source-map": "0.7.6",
 		"source-map-js": "^1.2.1",
 		"tslib": "^2.0.0"

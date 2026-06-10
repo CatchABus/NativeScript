@@ -1,3 +1,4 @@
+import parseInline, { Declaration } from 'inline-style-parser';
 import { getNativeScriptGlobals } from '../../globals/global-utils';
 import { ViewBase } from '../core/view-base';
 import { View } from '../core/view';
@@ -1065,40 +1066,45 @@ function resolveFilePathFromImport(importSource: string, fileName: string): stri
 }
 
 export const applyInlineStyle = profile(function applyInlineStyle(view: ViewBase, styleStr: string) {
-	const localStyle = `local { ${styleStr} }`;
-	const inlineRuleSet = CSSSource.fromSource(localStyle).selectors;
+	const nodes = parseInline(styleStr);
+	const cssDeclarations: Declaration[] = [];
 
 	// Reset unscoped css-variables
 	view.style.resetUnscopedCssVariables();
 
 	// Set all the css-variables first, so we can be sure they are up-to-date
-	inlineRuleSet[0].declarations.forEach((d) => {
-		// Use the actual property name so that a local value is set.
-		const property = d.property;
-		if (isCssVariable(property)) {
-			view.style.setUnscopedCssVariable(property, d.value);
-		}
-	});
+	for (let i = 0, length = nodes.length; i < length; i++) {
+		const node = nodes[i];
 
-	inlineRuleSet[0].declarations.forEach((d) => {
-		// Use the actual property name so that a local value is set.
-		const property = d.property;
-		try {
+		if (node.type === 'declaration') {
+			// Use the actual property name so that a local value is set.
+			const property = node.property;
+
 			if (isCssVariable(property)) {
-				// Skip css-variables, they have been handled
-				return;
+				view.style.setUnscopedCssVariable(property, node.value);
+			} else {
+				cssDeclarations.push(node);
 			}
+		}
+	}
 
-			const value = evaluateCssExpressions(view, property, d.value);
+	for (let i = 0, length = cssDeclarations.length; i < length; i++) {
+		const decl = cssDeclarations[i];
+		// Use the actual property name so that a local value is set.
+		const property = decl.property;
+
+		try {
+			const value = evaluateCssExpressions(view, property, decl.value);
+
 			if (property in view.style) {
 				view.style[property] = value;
 			} else {
 				view[property] = value;
 			}
 		} catch (e) {
-			Trace.write(`Failed to apply property [${d.property}] with value [${d.value}] to ${view}. ${e}`, Trace.categories.Error, Trace.messageType.error);
+			Trace.write(`Failed to apply property [${decl.property}] with value [${decl.value}] to ${view}. ${e}`, Trace.categories.Error, Trace.messageType.error);
 		}
-	});
+	}
 
 	// This is needed in case of changes to css-variable or css-calc expressions.
 	view._onCssStateChange();
