@@ -24,6 +24,12 @@ declare interface NativeScriptError extends Error {
 	stack?: string;
 }
 
+// Declaration for importing css files as modules
+declare module '*.css' {
+	const content: string | object; // The object type refers to CSS AST provided by bundlers
+	export default content;
+}
+
 //Augment the NodeJS global type with our own extensions
 declare module globalThis {
 	var NativeScriptHasPolyfilled: boolean;
