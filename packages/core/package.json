@@ -59,6 +59,7 @@
 		"preuninstall": "node cli-hooks/preuninstall.mjs"
 	},
 	"dependencies": {
+		"@adobe/css-tools": "^4.5.0",
 		"@csstools/css-calc": "~2.1.4",
 		"@csstools/css-color-parser": "^3.0.10",
 		"@csstools/css-parser-algorithms": "^3.0.5",
