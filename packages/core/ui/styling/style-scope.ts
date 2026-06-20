@@ -1,4 +1,3 @@
-import parseInline, { Declaration } from 'inline-style-parser';
 import { getNativeScriptGlobals } from '../../globals/global-utils';
 import { ViewBase } from '../core/view-base';
 import { View } from '../core/view';
@@ -17,7 +16,7 @@ import { CssAnimationParser } from './css-animation-parser';
 import { sanitizeModuleName } from '../../utils/common';
 import { resolveModuleName } from '../../module-name-resolver';
 import { cleanupImportantFlags } from './css-utils';
-import { AbstractCSSAdapter } from '../../css/adapters/AbstractCSSAdapter';
+import { AbstractCSSAdapter, NSCssDeclaration } from '../../css/adapters/AbstractCSSAdapter';
 import { DummyCSSAdapter } from '../../css/adapters/DummyCSSAdapter';
 import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
 import { parseCSSStyleSheet } from '../../css/css-parser';
@@ -838,7 +837,7 @@ export class StyleScope {
 	}
 
 	@profile
-	private setCss(cssString: string, cssFileName?): void {
+	private setCss(cssString: string, cssFileName?: string): void {
 		this._css = cssString;
 
 		const cssFile = CSSSource.fromSource(cssString, cssFileName);
@@ -849,7 +848,7 @@ export class StyleScope {
 	}
 
 	@profile
-	private appendCss(cssString: string, cssFileName?): void {
+	private appendCss(cssString: string, cssFileName?: string): void {
 		if (!cssString && !cssFileName) {
 			return;
 		}
@@ -1066,25 +1065,24 @@ function resolveFilePathFromImport(importSource: string, fileName: string): stri
 }
 
 export const applyInlineStyle = profile(function applyInlineStyle(view: ViewBase, styleStr: string) {
-	const nodes = parseInline(styleStr);
-	const cssDeclarations: Declaration[] = [];
+	const localStyle = `local { ${styleStr} }`;
+	const { declarations } = CSSSource.fromSource(localStyle).selectors[0];
+	const cssDeclarations: NSCssDeclaration[] = [];
 
 	// Reset unscoped css-variables
 	view.style.resetUnscopedCssVariables();
 
 	// Set all the css-variables first, so we can be sure they are up-to-date
-	for (let i = 0, length = nodes.length; i < length; i++) {
-		const node = nodes[i];
+	for (let i = 0, length = declarations.length; i < length; i++) {
+		const decl = declarations[i];
 
-		if (node.type === 'declaration') {
-			// Use the actual property name so that a local value is set.
-			const property = node.property;
+		// Use the actual property name so that a local value is set.
+		const property = decl.property;
 
-			if (isCssVariable(property)) {
-				view.style.setUnscopedCssVariable(property, node.value);
-			} else {
-				cssDeclarations.push(node);
-			}
+		if (isCssVariable(property)) {
+			view.style.setUnscopedCssVariable(property, decl.value);
+		} else {
+			cssDeclarations.push(decl);
 		}
 	}
 
