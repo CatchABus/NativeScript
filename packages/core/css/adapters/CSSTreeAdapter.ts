@@ -43,10 +43,7 @@ export class CSSTreeAdapter extends AbstractCSSAdapter<StyleSheetPlain> {
 							handler.onKeyframesRule(name, keyframes, mediaQueryString);
 						}
 					} else if (node.name === 'media') {
-						// Media query is composite in the case of nested media queries
-						const compositeMediaQuery = mediaQueryString ? mediaQueryString + MEDIA_QUERY_SEPARATOR + node.prelude.value : node.prelude.value;
-
-						this._parseRulesRecursive(node.block.children, handler, compositeMediaQuery);
+						this._parseRulesRecursive(node.block.children, handler, this.getComputedMediaQuery(node.prelude.value, mediaQueryString));
 					}
 				} else {
 					console.error('Unsupported css at-rule value type: ' + node.prelude.type);

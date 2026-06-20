@@ -38,10 +38,7 @@ export class CSSToolsAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 						handler.onKeyframesRule(name, keyframes, mediaQueryString);
 					}
 				} else if (this.isMedia(node)) {
-					// Media query is composite in the case of nested media queries
-					const compositeMediaQuery = mediaQueryString ? mediaQueryString + MEDIA_QUERY_SEPARATOR + node.media : node.media;
-
-					this._parseRulesRecursive(node.rules, handler, compositeMediaQuery);
+					this._parseRulesRecursive(node.rules, handler, this.getComputedMediaQuery(node.media, mediaQueryString));
 				}
 			} else if (this.isRule(node)) {
 				if (isFunction(handler.onRule)) {

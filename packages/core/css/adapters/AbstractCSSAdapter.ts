@@ -33,6 +33,11 @@ export abstract class AbstractCSSAdapter<T = object> {
 		return this._ast;
 	}
 
+	public getComputedMediaQuery(newQuery: string, fullQuery: string): string {
+		// Media query can be composite in the case of nested queries
+		return fullQuery ? fullQuery + MEDIA_QUERY_SEPARATOR + newQuery : newQuery;
+	}
+
 	abstract parseCSSRules(handler: AstRuleHandler): void;
 	abstract parseCSSImports(): NSCSSImport[];
 	abstract createCSSDeclarations(nodes: object[]): NSCssDeclaration[];

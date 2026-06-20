@@ -77,7 +77,7 @@ class CSSSource {
 	private _keyframes: Keyframes[];
 	private _source: string;
 
-	private constructor(ast: object, url: string, file: string, source: string) {
+	private constructor(ast, url: string, file: string, source: string) {
 		this._url = url;
 		this._file = file;
 		this._source = source;

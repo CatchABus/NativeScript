@@ -1,9 +1,8 @@
 import { parse as cssToolsParse } from '@adobe/css-tools';
-import { ParseOptions as CSSTreeOptions, parse as cssTreeParse } from 'css-tree';
+import { ParseOptions as CSSTreeOptions, parse as cssTreeParse, StyleSheetPlain } from 'css-tree';
 import { AbstractCSSAdapter } from './adapters/AbstractCSSAdapter';
 import { CSSTreeAdapter } from './adapters/CSSTreeAdapter';
 import { CSSToolsAdapter } from './adapters/CSSToolsAdapter';
-import { DummyCSSAdapter } from './adapters/DummyCSSAdapter';
 
 export function parseCSSStyleSheet(text: string, filename?: string, positions?: boolean): AbstractCSSAdapter {
 	let adapter: AbstractCSSAdapter;
@@ -19,10 +18,10 @@ export function parseCSSStyleSheet(text: string, filename?: string, positions?: 
 			positions,
 		} as CSSTreeOptions & {
 			list: boolean;
-		});
+		}) as unknown as StyleSheetPlain;
 
 		adapter = new CSSTreeAdapter(ast);
-	} else if (__CSS_PARSER__ === 'rework') {
+	} else if (__CSS_PARSER__ === 'rework' || __CSS_PARSER__ === 'css-tools') {
 		const ast = cssToolsParse(text, {
 			source: filename,
 		});
