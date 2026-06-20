@@ -22,11 +22,15 @@ export interface AstRuleHandler {
 export const importPattern = /('|")(.*?)\1/;
 export const MEDIA_QUERY_SEPARATOR = '&&';
 
-export abstract class AbstractCSSAdapter {
-	protected readonly _ast: object;
+export abstract class AbstractCSSAdapter<T = object> {
+	protected readonly _ast: T;
 
-	constructor(ast: object) {
+	constructor(ast: T) {
 		this._ast = ast;
+	}
+
+	get ast(): T {
+		return this._ast;
 	}
 
 	abstract parseCSSRules(handler: AstRuleHandler): void;

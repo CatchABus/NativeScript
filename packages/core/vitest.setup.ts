@@ -14,6 +14,7 @@ global.__IOS__ = true;
 global.__VISIONOS__ = false;
 global.__APPLE__ = true;
 global.__COMMONJS__ = false;
+global.__CSS_PARSER__ = 'rework';
 global.WeakRef.prototype.get = global.WeakRef.prototype.deref;
 global.NativeClass = function () {};
 global.NSBundle = {

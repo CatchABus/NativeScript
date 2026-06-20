@@ -2,7 +2,7 @@ import { AbstractCSSAdapter, AstRuleHandler, importPattern, MEDIA_QUERY_SEPARATO
 import { isFunction } from '../../utils';
 import type { CssAtRuleAST, CssCommentAST, CssCommonAST, CssDeclarationAST, CssKeyframeAST, CssKeyframesAST, CssMediaAST, CssRuleAST, CssStylesheetAST } from '@adobe/css-tools';
 
-export class CSSToolsAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
+export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 	override parseCSSRules(handler: AstRuleHandler): void {
 		const nodes = this._ast.stylesheet.rules;
 		this._parseRulesRecursive(nodes, handler);

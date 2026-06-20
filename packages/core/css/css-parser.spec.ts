@@ -224,8 +224,8 @@ describe('css-parser', () => {
 
 		it('serialization', () => {
 			const cssOutputFile = path.resolve(testingToolsDir, 'out/raw.css.json');
-			const ast = parseCSSStyleSheet(themeCoreLightIos, 'nativescript-theme-core/css/core.light.css');
-			fs.writeFileSync(cssOutputFile, JSON.stringify(ast, null, '  '));
+			const adapter = parseCSSStyleSheet(themeCoreLightIos, 'nativescript-theme-core/css/core.light.css');
+			fs.writeFileSync(cssOutputFile, JSON.stringify(adapter.ast, null, '  '));
 
 			const nsParser = new CSS3Parser(themeCoreLightIos);
 			const nativescriptStylesheet = nsParser.parseAStylesheet();

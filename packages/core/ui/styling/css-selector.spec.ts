@@ -20,8 +20,7 @@ describe('css-selector', () => {
 	});
 
 	function create(css: string, source = 'css-selectors.ts@test'): { rulesets: RuleSet[]; selectorScope: StyleSheetSelectorScope<any> } {
-		const ast = parseCSSStyleSheet(css, source);
-		const adapter = new CSSTreeAdapter(ast);
+		const adapter = parseCSSStyleSheet(css, source);
 		const rulesets = [];
 
 		adapter.parseCSSRules({

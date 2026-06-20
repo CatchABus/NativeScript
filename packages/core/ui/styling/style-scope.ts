@@ -17,9 +17,8 @@ import { sanitizeModuleName } from '../../utils/common';
 import { resolveModuleName } from '../../module-name-resolver';
 import { cleanupImportantFlags } from './css-utils';
 import { AbstractCSSAdapter, NSCssDeclaration } from '../../css/adapters/AbstractCSSAdapter';
-import { DummyCSSAdapter } from '../../css/adapters/DummyCSSAdapter';
-import { CSSTreeAdapter } from '../../css/adapters/CSSTreeAdapter';
 import { parseCSSStyleSheet } from '../../css/css-parser';
+import { PostCSSAdapter } from '../../css/adapters/PostCSSAdapter';
 
 let mergedApplicationCssSelectors: RuleSet[] = [];
 let applicationCssSelectors: RuleSet[] = [];
@@ -83,18 +82,10 @@ class CSSSource {
 		this._file = file;
 		this._source = source;
 
-		if (ast) {
-			this._adapter = this._resolveAdapter(ast);
-		} else {
-			ast = this.parse();
+		// If AST is truthy, it's provided by the bundler so use postcss
+		this._adapter = ast ? new PostCSSAdapter(ast) : this.parseCSS();
 
-			// This is the default adapter when ast is not provided by bundler
-			if (ast) {
-				this._adapter = new CSSTreeAdapter(ast);
-			}
-		}
-
-		if (ast) {
+		if (this._adapter) {
 			this.createSelectorsAndKeyframes();
 		} else {
 			this._selectors = [];
@@ -206,18 +197,6 @@ class CSSSource {
 		return this._source;
 	}
 
-	private _resolveAdapter(ast: object): AbstractCSSAdapter {
-		let adapter: AbstractCSSAdapter;
-
-		if (__CSS_PARSER__ === 'css-tree') {
-			adapter = new CSSTreeAdapter(ast);
-		} else {
-			adapter = new DummyCSSAdapter(ast);
-		}
-
-		return adapter;
-	}
-
 	@profile
 	private load(): void {
 		const file = File.fromPath(this._file);
@@ -225,8 +204,8 @@ class CSSSource {
 	}
 
 	@profile
-	private parse(): object {
-		let ast: object;
+	private parseCSS(): AbstractCSSAdapter {
+		let adapter: AbstractCSSAdapter;
 
 		try {
 			if (!this._source && this._file) {
@@ -234,20 +213,15 @@ class CSSSource {
 			}
 
 			// [object Object] check guards against empty app.css file
-			ast = this._source && this.source !== '[object Object]' ? this.parseCSSAst() : null;
+			adapter = this._source && this.source !== '[object Object]' ? parseCSSStyleSheet(this.source, this._file, true) : null;
 		} catch (e) {
 			if (Trace.isEnabled()) {
 				Trace.write('Css styling failed: ' + e, Trace.categories.Style, Trace.messageType.error);
 			}
-			ast = null;
+			adapter = null;
 		}
 
-		return ast;
-	}
-
-	@profile
-	private parseCSSAst() {
-		return parseCSSStyleSheet(this.source, this._file, true);
+		return adapter;
 	}
 
 	@profile

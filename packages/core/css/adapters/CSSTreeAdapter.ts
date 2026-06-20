@@ -2,9 +2,7 @@ import type { AtrulePlain, CssNodePlain, DeclarationPlain, RulePlain, StyleSheet
 import { AbstractCSSAdapter, AstRuleHandler, importPattern, MEDIA_QUERY_SEPARATOR, NSCssDeclaration, NSCSSImport, NSCSSKeyframe } from './AbstractCSSAdapter';
 import { isFunction } from '../../utils';
 
-export class CSSTreeAdapter extends AbstractCSSAdapter {
-	declare protected readonly _ast: StyleSheetPlain;
-
+export class CSSTreeAdapter extends AbstractCSSAdapter<StyleSheetPlain> {
 	override parseCSSRules(handler: AstRuleHandler): void {
 		const nodes = this._ast.children;
 		this._parseRulesRecursive(nodes, handler);
