@@ -1,24 +1,24 @@
 import { AbstractCSSAdapter, AstRuleHandler, importPattern, MEDIA_QUERY_SEPARATOR, NSCssDeclaration, NSCSSImport, NSCSSKeyframe } from './AbstractCSSAdapter';
 import { isFunction } from '../../utils';
-import type { CssAtRuleAST, CssCommentAST, CssCommonAST, CssDeclarationAST, CssKeyframeAST, CssKeyframesAST, CssMediaAST, CssRuleAST, CssStylesheetAST } from '@adobe/css-tools';
+import type { Root, ChildNode, Rule, AtRule, Declaration } from 'postcss';
 
-export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
+export class PostCSSAdapter extends AbstractCSSAdapter<Root> {
 	override parseCSSRules(handler: AstRuleHandler): void {
-		const nodes = this._ast.stylesheet.rules;
+		const nodes = this._ast.nodes;
 		this._parseRulesRecursive(nodes, handler);
 	}
 
 	override parseCSSImports(): NSCSSImport[] {
-		const nodes = this._ast.stylesheet.rules;
+		const nodes = this._ast.nodes;
 		const imports: NSCSSImport[] = [];
 
 		for (const node of nodes) {
-			if (node.type === 'import') {
-				const urlMatch = node.import ? node.import.match(importPattern) : null;
+			if (this.isAtRule(node) && node.name === 'import') {
+				const urlMatch = node.params ? node.params.match(importPattern) : null;
 				if (urlMatch) {
 					imports.push({
 						url: urlMatch[2],
-						source: node.position?.source ? node.position.source : null,
+						source: null,
 					});
 				}
 			}
@@ -27,23 +27,23 @@ export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 		return imports;
 	}
 
-	private _parseRulesRecursive(nodes: (CssAtRuleAST | CssDeclarationAST)[], handler: AstRuleHandler, mediaQueryString?: string): void {
+	private _parseRulesRecursive(nodes: ChildNode[], handler: AstRuleHandler, mediaQueryString?: string): void {
 		for (const node of nodes) {
 			if (this.isAtRule(node)) {
 				if (this.isKeyframes(node)) {
 					if (isFunction(handler.onKeyframesRule)) {
 						const name = node.name;
-						const keyframes = this.createCSSKeyframes(node.keyframes);
+						const keyframes = this.createCSSKeyframes(node.nodes);
 
 						handler.onKeyframesRule(name, keyframes, mediaQueryString);
 					}
 				} else if (this.isMedia(node)) {
-					this._parseRulesRecursive(node.rules, handler, this.getComputedMediaQuery(node.media, mediaQueryString));
+					this._parseRulesRecursive(node.nodes, handler, this.getComputedMediaQuery(node.params, mediaQueryString));
 				}
 			} else if (this.isRule(node)) {
 				if (isFunction(handler.onRule)) {
 					const selectors = node.selectors;
-					const declarations: NSCssDeclaration[] = this.createCSSDeclarations(node.declarations);
+					const declarations: NSCssDeclaration[] = this.createCSSDeclarations(node.nodes);
 
 					handler.onRule(selectors, declarations, mediaQueryString);
 				}
@@ -51,19 +51,17 @@ export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 		}
 	}
 
-	override createCSSDeclarations(nodes: (CssAtRuleAST | CssDeclarationAST)[]): NSCssDeclaration[] {
+	override createCSSDeclarations(nodes: ChildNode[]): NSCssDeclaration[] {
 		const declarations: NSCssDeclaration[] = [];
 
 		for (const decl of nodes) {
 			if (this.isDeclaration(decl)) {
-				const importantIdx = decl.value.indexOf('!important');
-				const value = importantIdx > -1 ? decl.value.substring(0, importantIdx).trim() : decl.value;
 				const cssDecl: NSCssDeclaration = {
-					property: decl.property.startsWith('--') ? decl.property : decl.property.toLowerCase(),
-					value,
+					property: decl.prop.startsWith('--') ? decl.prop : decl.prop.toLowerCase(),
+					value: decl.value ? decl.value.trim() : decl.value,
 				};
 
-				if (importantIdx > -1) {
+				if (decl.important) {
 					cssDecl.important = true;
 				}
 
@@ -74,14 +72,14 @@ export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 		return declarations;
 	}
 
-	override createCSSKeyframes(nodes: (CssCommentAST | CssKeyframeAST)[]): NSCSSKeyframe[] {
+	override createCSSKeyframes(nodes: ChildNode[]): NSCSSKeyframe[] {
 		const keyframes: NSCSSKeyframe[] = [];
 
 		for (const node of nodes) {
-			if (node.type === 'keyframe') {
+			if (node.type === 'rule') {
 				keyframes.push({
-					values: node.values,
-					declarations: this.createCSSDeclarations(node.declarations),
+					values: node.selector.split(',').map((value) => value.trim()),
+					declarations: this.createCSSDeclarations(node.nodes),
 				});
 			}
 		}
@@ -89,23 +87,23 @@ export class PostCSSAdapter extends AbstractCSSAdapter<CssStylesheetAST> {
 		return keyframes;
 	}
 
-	override isRule(node: CssCommonAST): node is CssRuleAST {
+	override isRule(node: ChildNode): node is Rule {
 		return node.type === 'rule';
 	}
 
-	override isAtRule(node: CssCommonAST): node is CssKeyframesAST | CssMediaAST {
-		return node.type === 'keyframes' || node.type === 'media';
+	override isAtRule(node: ChildNode): node is AtRule {
+		return node.type === 'atrule';
 	}
 
-	override isDeclaration(node: CssCommonAST): node is CssDeclarationAST {
-		return node.type === 'declaration';
+	override isDeclaration(node: ChildNode): node is Declaration {
+		return node.type === 'decl';
 	}
 
-	override isMedia(node: CssCommonAST): node is CssMediaAST {
-		return node.type === 'media';
+	override isMedia(node: AtRule): boolean {
+		return node.name === 'media';
 	}
 
-	override isKeyframes(node: CssCommonAST): node is CssKeyframesAST {
-		return node.type === 'keyframes';
+	override isKeyframes(node: AtRule): boolean {
+		return node.name === 'keyframes';
 	}
 }
