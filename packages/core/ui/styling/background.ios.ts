@@ -4,7 +4,7 @@ import { View } from '../core/view';
 import { Point, Position } from '../core/view/view-interfaces';
 import { LinearGradient } from './linear-gradient';
 import { Screen } from '../../platform';
-import { isDataURI, isFileOrResourcePath, layout } from '../../utils';
+import { isDataURI, isFileOrResourcePath, layout, SDK_VERSION } from '../../utils';
 import { ios as iosViewUtils, NativeScriptUIView } from '../utils';
 import { ImageSource } from '../../image-source';
 import type { CSSValue } from '../../css-value/reworkcss-value';
@@ -13,6 +13,7 @@ import { BoxShadow } from './box-shadow';
 import { BackgroundClearFlags } from './background-common';
 import { ClipPathFunction } from './clip-path-function';
 import { CoreTypes } from '../../core-types';
+import { Color } from '../../color';
 
 export * from './background-common';
 
@@ -59,7 +60,14 @@ export namespace ios {
 		drawBackgroundVisualEffects(view);
 
 		if (!background.image) {
-			callback(background?.color?.ios);
+			const needsNonUniformCornerRadii = SDK_VERSION < 26 && background.hasBorderRadius() && !background.hasUniformBorderRadius();
+
+			if (needsNonUniformCornerRadii) {
+				const roundedColorImage = generateRoundedColoredImage(background?.color, view, flip);
+				callback(roundedColorImage ? UIColor.alloc().initWithPatternImage(roundedColorImage) : background?.color?.ios);
+			} else {
+				callback(background?.color?.ios);
+			}
 		} else {
 			if (!(background.image instanceof LinearGradient)) {
 				createUIImageFromURI(view, background.image, flip, (image: UIImage) => {
@@ -73,6 +81,7 @@ export namespace ios {
 		const background = view.style.backgroundInternal;
 		const nativeView = <NativeScriptUIView>view.nativeViewProtected;
 		const layer: CALayer = nativeView.layer;
+		const supportsViewCorners = SDK_VERSION >= 26;
 
 		let needsLayerAdjustmentOnScroll = false;
 
@@ -86,23 +95,60 @@ export namespace ios {
 			needsLayerAdjustmentOnScroll = true;
 		}
 
-		// Initialize clipping mask (usually for clip-path and non-uniform rounded borders)
-		maskLayerIfNeeded(nativeView, background);
+		if (background.hasUniformBorderRadius()) {
+			const borderRadius = getUniformBorderRadius(view, layer.bounds);
 
-		if (background.hasUniformBorder()) {
-			const borderColor = background.getUniformBorderColor();
-			layer.borderColor = borderColor?.ios?.CGColor;
+			if (supportsViewCorners) {
+				nativeView.cornerConfiguration = borderRadius > 0 ? UICornerConfiguration.configurationWithRadius(UICornerRadius.fixedRadius(borderRadius)) : UICornerConfiguration.alloc().init();
+			} else {
+				layer.cornerRadius = borderRadius;
+			}
+
+			if (nativeView.gradientLayer) {
+				nativeView.gradientLayer.mask = null;
+				nativeView.gradientLayer.cornerRadius = borderRadius;
+			}
+		} else {
+			if (supportsViewCorners) {
+				nativeView.cornerConfiguration = UICornerConfiguration.configurationWithTopLeftRadiusTopRightRadiusBottomLeftRadiusBottomRightRadius(UICornerRadius.fixedRadius(layout.toDeviceIndependentPixels(background.borderTopLeftRadius)), UICornerRadius.fixedRadius(layout.toDeviceIndependentPixels(background.borderTopRightRadius)), UICornerRadius.fixedRadius(layout.toDeviceIndependentPixels(background.borderBottomLeftRadius)), UICornerRadius.fixedRadius(layout.toDeviceIndependentPixels(background.borderBottomRightRadius)));
+			} else {
+				// Custom layers will take care of radii at the next step
+				layer.cornerRadius = 0;
+			}
+
+			if (nativeView.gradientLayer) {
+				nativeView.gradientLayer.cornerRadius = 0;
+			}
+		}
+
+		if (background.hasUniformBorderWidth() && background.hasUniformBorderColor() && (supportsViewCorners || background.hasUniformBorderRadius())) {
+			layer.borderColor = background.getUniformBorderColor()?.ios?.CGColor;
 			layer.borderWidth = layout.toDeviceIndependentPixels(background.getUniformBorderWidth());
-			layer.cornerRadius = getUniformBorderRadius(view, layer.bounds);
 			layer.cornerCurve = background.cornerShape === CoreTypes.CornerShape.squircle ? kCACornerCurveContinuous : kCACornerCurveCircular;
 		} else {
-			drawNonUniformBorders(nativeView, background);
-			needsLayerAdjustmentOnScroll = true;
+			layer.borderColor = null;
+			layer.borderWidth = 0;
+			layer.cornerCurve = null;
+
+			if (background.hasBorderWidth()) {
+				drawNonUniformBorders(nativeView, background);
+				needsLayerAdjustmentOnScroll = true;
+			}
 		}
 
 		// Clip-path should be called after borders are applied
-		if (nativeView.maskType === iosViewUtils.LayerMask.CLIP_PATH && layer.mask instanceof CAShapeLayer) {
-			layer.mask.path = generateClipPath(view, layer.bounds);
+		if (background.clipPath) {
+			let mask: CAShapeLayer;
+
+			if (layer.mask instanceof CAShapeLayer) {
+				mask = layer.mask;
+			} else {
+				mask = CAShapeLayer.new();
+				nativeView.originalMask = layer.mask;
+				layer.mask = mask;
+			}
+
+			mask.path = generateClipPath(view, layer.bounds);
 		}
 
 		if (background.hasBoxShadows()) {
@@ -124,21 +170,7 @@ export namespace ios {
 		const background: BackgroundDefinition = view.style.backgroundInternal;
 		const hasGradientBackground: boolean = background.image && background.image instanceof LinearGradient;
 
-		// Remove mask if there is no clip path or non-uniform border with radius
-		let needsMask;
-		switch (nativeView.maskType) {
-			case iosViewUtils.LayerMask.BORDER:
-				needsMask = !background.hasUniformBorder() && background.hasBorderRadius();
-				break;
-			case iosViewUtils.LayerMask.CLIP_PATH:
-				needsMask = !!background.clipPath;
-				break;
-			default:
-				needsMask = false;
-				break;
-		}
-
-		if (!needsMask) {
+		if (!background.clipPath) {
 			clearLayerMask(nativeView);
 		}
 
@@ -335,8 +367,14 @@ export namespace ios {
 
 	export function getUniformBorderRadius(view: View, bounds: CGRect): number {
 		const background = view.style.backgroundInternal;
+		const uniformBorderRadius = background.getUniformBorderRadius();
+
+		if (uniformBorderRadius <= 0) {
+			return 0;
+		}
+
 		const { width, height } = bounds.size;
-		const cornerRadius = layout.toDeviceIndependentPixels(background.getUniformBorderRadius());
+		const cornerRadius = layout.toDeviceIndependentPixels(uniformBorderRadius);
 
 		return Math.min(Math.min(width / 2, height / 2), cornerRadius);
 	}
@@ -348,13 +386,6 @@ export namespace ios {
 		return generateNonUniformBorderInnerClipPath(bounds, background, cappedOuterRadii);
 	}
 
-	export function generateNonUniformBorderOuterClipRoundedPath(view: View, bounds: CGRect): any {
-		const background = view.style.backgroundInternal;
-
-		const cappedOuterRadii = calculateNonUniformBorderCappedRadii(bounds, background);
-		return generateNonUniformBorderOuterClipPath(bounds, cappedOuterRadii);
-	}
-
 	export function generateNonUniformMultiColorBorderRoundedPaths(view: View, bounds: CGRect): Array<any> {
 		const background = view.style.backgroundInternal;
 
@@ -362,34 +393,9 @@ export namespace ios {
 	}
 }
 
-function maskLayerIfNeeded(nativeView: NativeScriptUIView, background: BackgroundDefinition) {
-	const layer: CALayer = nativeView.layer;
-
-	// Check if layer should be masked
-	if (!(layer.mask instanceof CAShapeLayer)) {
-		// Since layers can only accept up to a single mask at a time, clip path is given more priority
-		if (background.clipPath) {
-			nativeView.maskType = iosViewUtils.LayerMask.CLIP_PATH;
-		} else if (!background.hasUniformBorder() && background.hasBorderRadius()) {
-			nativeView.maskType = iosViewUtils.LayerMask.BORDER;
-		} else {
-			nativeView.maskType = null;
-		}
-
-		if (nativeView.maskType != null) {
-			nativeView.originalMask = layer.mask;
-			layer.mask = CAShapeLayer.new();
-		}
-	}
-}
-
 function clearLayerMask(nativeView: NativeScriptUIView) {
-	if (nativeView.outerShadowContainerLayer) {
-		nativeView.outerShadowContainerLayer.mask = null;
-	}
 	nativeView.layer.mask = nativeView.originalMask;
 	nativeView.originalMask = null;
-	nativeView.maskType = null;
 }
 
 function onBackgroundViewScroll(args: ScrollEventData): void {
@@ -426,8 +432,6 @@ function adjustLayersForScrollView(nativeView: UIScrollView & NativeScriptUIView
 		nativeView.borderLayer.setAffineTransform(transform);
 	}
 	if (nativeView.outerShadowContainerLayer) {
-		// Update bounds of shadow layer as it belongs to parent view
-		nativeView.outerShadowContainerLayer.bounds = nativeView.bounds;
 		nativeView.outerShadowContainerLayer.setAffineTransform(transform);
 	}
 
@@ -611,6 +615,33 @@ function getDrawParams(this: void, image: UIImage, background: BackgroundDefinit
 	return res;
 }
 
+function generateRoundedColoredImage(color: Color, view: View, flip?: boolean): UIImage {
+	const background = view.style.backgroundInternal;
+	const nativeView: NativeScriptUIView = view.nativeViewProtected;
+
+	if (!color?.ios || !nativeView) {
+		return null;
+	}
+
+	const frame = nativeView.frame;
+	const boundsWidth = view.scaleX ? frame.size.width / view.scaleX : frame.size.width;
+	const boundsHeight = view.scaleY ? frame.size.height / view.scaleY : frame.size.height;
+
+	UIGraphicsBeginImageContextWithOptions(CGSizeMake(boundsWidth, boundsHeight), false, 0.0);
+	const context = UIGraphicsGetCurrentContext();
+	const cappedOuterRadii = calculateNonUniformBorderCappedRadii(nativeView.bounds, background);
+	const path = generateNonUniformBorderOuterClipPath(nativeView.bounds, cappedOuterRadii);
+
+	CGContextAddPath(context, path);
+	CGContextSetFillColorWithColor(context, color.ios.CGColor);
+	CGContextFillPath(context);
+
+	const bgImage = UIGraphicsGetImageFromCurrentImageContext();
+	UIGraphicsEndImageContext();
+
+	return flip ? _flipImage(bgImage) : bgImage;
+}
+
 function generatePatternImage(img: UIImage, view: View, flip?: boolean): UIImage {
 	const background = view.style.backgroundInternal;
 	const nativeView: NativeScriptUIView = view.nativeViewProtected;
@@ -620,9 +651,9 @@ function generatePatternImage(img: UIImage, view: View, flip?: boolean): UIImage
 	}
 
 	const frame = nativeView.frame;
+	const needsNonUniformCornerRadii = SDK_VERSION < 26 && background.hasBorderRadius() && !background.hasUniformBorderRadius();
 	const boundsWidth = view.scaleX ? frame.size.width / view.scaleX : frame.size.width;
 	const boundsHeight = view.scaleY ? frame.size.height / view.scaleY : frame.size.height;
-
 	const params = getDrawParams(img, background, boundsWidth, boundsHeight);
 
 	if (params.sizeX > 0 && params.sizeY > 0) {
@@ -633,8 +664,20 @@ function generatePatternImage(img: UIImage, view: View, flip?: boolean): UIImage
 		UIGraphicsEndImageContext();
 	}
 
-	UIGraphicsBeginImageContextWithOptions(CGSizeFromString(`{${boundsWidth},${boundsHeight}}`), false, 0.0);
+	UIGraphicsBeginImageContextWithOptions(CGSizeMake(boundsWidth, boundsHeight), false, 0.0);
 	const context = UIGraphicsGetCurrentContext();
+
+	// This is a workaround for older sdks that don't support cornerConfiguration
+	if (needsNonUniformCornerRadii) {
+		const cappedOuterRadii = calculateNonUniformBorderCappedRadii(nativeView.bounds, background);
+		const path = generateNonUniformBorderOuterClipPath(nativeView.bounds, cappedOuterRadii);
+
+		CGContextSaveGState(context);
+
+		// Perform clipping to make image rounded
+		CGContextAddPath(context, path);
+		CGContextClip(context);
+	}
 
 	if (background.color && background.color.ios) {
 		CGContextSetFillColorWithColor(context, background.color.ios.CGColor);
@@ -655,6 +698,10 @@ function generatePatternImage(img: UIImage, view: View, flip?: boolean): UIImage
 		const patternRect = CGRectMake(params.posX, params.posY, w, h);
 
 		img.drawAsPatternInRect(patternRect);
+	}
+
+	if (!needsNonUniformCornerRadii) {
+		CGContextRestoreGState(context);
 	}
 
 	const bgImage = UIGraphicsGetImageFromCurrentImageContext();
@@ -721,75 +768,65 @@ function calculateNonUniformBorderCappedRadii(bounds: CGRect, background: Backgr
 function drawNonUniformBorders(nativeView: NativeScriptUIView, background: BackgroundDefinition): void {
 	const layer: CALayer = nativeView.layer;
 	const layerBounds = layer.bounds;
-
-	layer.borderColor = null;
-	layer.borderWidth = 0;
-	layer.cornerRadius = 0;
-
 	const cappedOuterRadii = calculateNonUniformBorderCappedRadii(layerBounds, background);
-	if (nativeView.maskType === iosViewUtils.LayerMask.BORDER && layer.mask instanceof CAShapeLayer) {
-		layer.mask.path = generateNonUniformBorderOuterClipPath(layerBounds, cappedOuterRadii);
+
+	if (!nativeView.hasNonUniformBorder) {
+		nativeView.borderLayer = CAShapeLayer.new();
+		nativeView.borderLayer.fillRule = kCAFillRuleEvenOdd;
+		layer.addSublayer(nativeView.borderLayer);
+		nativeView.hasNonUniformBorder = true;
 	}
 
-	if (background.hasBorderWidth()) {
-		if (!nativeView.hasNonUniformBorder) {
-			nativeView.borderLayer = CAShapeLayer.new();
-			nativeView.borderLayer.fillRule = kCAFillRuleEvenOdd;
-			layer.addSublayer(nativeView.borderLayer);
-			nativeView.hasNonUniformBorder = true;
+	if (background.hasUniformBorderColor()) {
+		// Use anti-aliasing or borders will draw incorrectly at times
+		nativeView.borderLayer.shouldRasterize = true;
+		nativeView.borderLayer.rasterizationScale = Screen.mainScreen.scale;
+		nativeView.borderLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+		nativeView.borderLayer.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
+	} else {
+		// Non-uniform borders need more layers in order to display multiple colors at the same time
+		let borderTopLayer, borderRightLayer, borderBottomLayer, borderLeftLayer;
+
+		if (!nativeView.hasNonUniformBorderColor) {
+			const maskLayer = CAShapeLayer.new();
+			maskLayer.fillRule = kCAFillRuleEvenOdd;
+			// Use anti-aliasing or borders will draw incorrectly at times
+			maskLayer.shouldRasterize = true;
+			maskLayer.rasterizationScale = Screen.mainScreen.scale;
+			nativeView.borderLayer.mask = maskLayer;
+
+			borderTopLayer = CAShapeLayer.new();
+			borderRightLayer = CAShapeLayer.new();
+			borderBottomLayer = CAShapeLayer.new();
+			borderLeftLayer = CAShapeLayer.new();
+
+			nativeView.borderLayer.addSublayer(borderTopLayer);
+			nativeView.borderLayer.addSublayer(borderRightLayer);
+			nativeView.borderLayer.addSublayer(borderBottomLayer);
+			nativeView.borderLayer.addSublayer(borderLeftLayer);
+
+			nativeView.hasNonUniformBorderColor = true;
+		} else {
+			borderTopLayer = nativeView.borderLayer.sublayers[0];
+			borderRightLayer = nativeView.borderLayer.sublayers[1];
+			borderBottomLayer = nativeView.borderLayer.sublayers[2];
+			borderLeftLayer = nativeView.borderLayer.sublayers[3];
 		}
 
-		if (background.hasUniformBorderColor()) {
-			// Use anti-aliasing or borders will draw incorrectly at times
-			nativeView.borderLayer.shouldRasterize = true;
-			nativeView.borderLayer.rasterizationScale = Screen.mainScreen.scale;
-			nativeView.borderLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			nativeView.borderLayer.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
-		} else {
-			// Non-uniform borders need more layers in order to display multiple colors at the same time
-			let borderTopLayer, borderRightLayer, borderBottomLayer, borderLeftLayer;
+		const paths = generateNonUniformMultiColorBorderPaths(layerBounds, background);
 
-			if (!nativeView.hasNonUniformBorderColor) {
-				const maskLayer = CAShapeLayer.new();
-				maskLayer.fillRule = kCAFillRuleEvenOdd;
-				// Use anti-aliasing or borders will draw incorrectly at times
-				maskLayer.shouldRasterize = true;
-				maskLayer.rasterizationScale = Screen.mainScreen.scale;
-				nativeView.borderLayer.mask = maskLayer;
+		borderTopLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+		borderTopLayer.path = paths[0];
+		borderRightLayer.fillColor = background.borderRightColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+		borderRightLayer.path = paths[1];
+		borderBottomLayer.fillColor = background.borderBottomColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+		borderBottomLayer.path = paths[2];
+		borderLeftLayer.fillColor = background.borderLeftColor?.ios?.CGColor || UIColor.blackColor.CGColor;
+		borderLeftLayer.path = paths[3];
 
-				borderTopLayer = CAShapeLayer.new();
-				borderRightLayer = CAShapeLayer.new();
-				borderBottomLayer = CAShapeLayer.new();
-				borderLeftLayer = CAShapeLayer.new();
-
-				nativeView.borderLayer.addSublayer(borderTopLayer);
-				nativeView.borderLayer.addSublayer(borderRightLayer);
-				nativeView.borderLayer.addSublayer(borderBottomLayer);
-				nativeView.borderLayer.addSublayer(borderLeftLayer);
-
-				nativeView.hasNonUniformBorderColor = true;
-			} else {
-				borderTopLayer = nativeView.borderLayer.sublayers[0];
-				borderRightLayer = nativeView.borderLayer.sublayers[1];
-				borderBottomLayer = nativeView.borderLayer.sublayers[2];
-				borderLeftLayer = nativeView.borderLayer.sublayers[3];
-			}
-
-			const paths = generateNonUniformMultiColorBorderPaths(layerBounds, background);
-
-			borderTopLayer.fillColor = background.borderTopColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderTopLayer.path = paths[0];
-			borderRightLayer.fillColor = background.borderRightColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderRightLayer.path = paths[1];
-			borderBottomLayer.fillColor = background.borderBottomColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderBottomLayer.path = paths[2];
-			borderLeftLayer.fillColor = background.borderLeftColor?.ios?.CGColor || UIColor.blackColor.CGColor;
-			borderLeftLayer.path = paths[3];
-
-			// Clip inner area to create borders
-			if (nativeView.borderLayer.mask instanceof CAShapeLayer) {
-				nativeView.borderLayer.mask.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
-			}
+		// Clip inner area to create borders
+		if (nativeView.borderLayer.mask instanceof CAShapeLayer) {
+			nativeView.borderLayer.mask.path = generateNonUniformBorderInnerClipPath(layerBounds, background, cappedOuterRadii);
 		}
 	}
 }
@@ -868,7 +905,7 @@ function generateNonUniformBorderInnerClipPath(bounds: CGRect, background: Backg
 	const cappedBorderLeftWidth = borderLeftWidth && borderLeftWidth * Math.min(1, width / borderHWidth);
 
 	const clipPath = CGPathCreateMutable();
-	CGPathAddRect(clipPath, null, CGRectMake(x, y, width, height));
+	CGPathAddPath(clipPath, null, generateNonUniformBorderOuterClipPath(bounds, cappedOuterRadii));
 
 	// Inner clip paths
 	if (cappedBorderTopWidth > 0 || cappedBorderLeftWidth > 0) {
@@ -914,14 +951,14 @@ function generateNonUniformBorderInnerClipPath(bounds: CGRect, background: Backg
 }
 
 /**
- * Calculates the needed widths for creating triangular shapes for each border.
+ * Calculates the needed widths for creating trapezoid shapes for each border.
  * To achieve this, all border widths are scaled according to view bounds.
  *
  * @param bounds
  * @param background
  * @returns
  */
-function getBorderTriangleWidths(bounds: CGRect, background: BackgroundDefinition): Position {
+function getBorderTrapezoidWidths(bounds: CGRect, background: BackgroundDefinition): Position {
 	const width: number = bounds.origin.x + bounds.size.width;
 	const height: number = bounds.origin.y + bounds.size.height;
 
@@ -973,7 +1010,7 @@ function generateNonUniformMultiColorBorderPaths(bounds: CGRect, background: Bac
 		right: x + width,
 	};
 
-	const borderWidths: Position = getBorderTriangleWidths(bounds, background);
+	const borderWidths: Position = getBorderTrapezoidWidths(bounds, background);
 	const paths = new Array(4);
 
 	const lto: Point = {
@@ -1086,7 +1123,7 @@ function drawBoxShadow(view: View): void {
 	const bounds = nativeView.bounds;
 	const boxShadows: BoxShadow[] = background.getBoxShadows();
 
-	// Initialize outer shadows
+	// Initialize shadows group layer
 	let shadowGroupLayer: CALayer;
 
 	if (nativeView.outerShadowContainerLayer) {
@@ -1094,8 +1131,7 @@ function drawBoxShadow(view: View): void {
 	} else {
 		shadowGroupLayer = CALayer.new();
 
-		// Instead of nesting it, add shadow container layer underneath view so that it's not affected by border masking
-		layer.superlayer.insertSublayerBelow(shadowGroupLayer, layer);
+		layer.insertSublayerBelow(shadowGroupLayer, layer);
 		nativeView.outerShadowContainerLayer = shadowGroupLayer;
 	}
 
@@ -1146,26 +1182,6 @@ function drawBoxShadow(view: View): void {
 			}
 		}
 	}
-
-	// Apply clip path to shadow
-	if (nativeView.maskType === iosViewUtils.LayerMask.CLIP_PATH && layer.mask instanceof CAShapeLayer) {
-		if (!shadowGroupLayer.mask) {
-			shadowGroupLayer.mask = CAShapeLayer.new();
-		}
-		if (shadowGroupLayer.mask instanceof CAShapeLayer) {
-			shadowGroupLayer.mask.path = layer.mask.path;
-		}
-	}
-
-	shadowGroupLayer.bounds = bounds;
-	shadowGroupLayer.transform = layer.transform;
-	shadowGroupLayer.anchorPoint = layer.anchorPoint;
-	shadowGroupLayer.position = nativeView.center;
-	shadowGroupLayer.zPosition = layer.zPosition;
-
-	// Inherit view visibility values
-	shadowGroupLayer.opacity = layer.opacity;
-	shadowGroupLayer.hidden = layer.hidden;
 }
 
 function clearBoxShadow(nativeView: NativeScriptUIView) {
