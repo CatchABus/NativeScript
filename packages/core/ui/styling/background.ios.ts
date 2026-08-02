@@ -33,7 +33,6 @@ interface CappedOuterRadii {
 	bottomRight: number;
 }
 
-const clearCGColor = UIColor.clearColor.CGColor;
 const uriPattern = /url\(('|")(.*?)\1\)/;
 const symbolUrl = Symbol('backgroundImageUrl');
 
@@ -136,25 +135,13 @@ export namespace ios {
 			}
 		}
 
-		// Clip-path should be called after borders are applied
-		if (background.clipPath) {
-			let mask: CAShapeLayer;
-
-			if (layer.mask instanceof CAShapeLayer) {
-				mask = layer.mask;
-			} else {
-				mask = CAShapeLayer.new();
-				nativeView.originalMask = layer.mask;
-				layer.mask = mask;
-			}
-
-			mask.path = generateClipPath(view, layer.bounds);
-		}
-
 		if (background.hasBoxShadows()) {
 			drawBoxShadow(view);
 			needsLayerAdjustmentOnScroll = true;
 		}
+
+		// Mask is applied for clip-path or some cases of corner radii for older sdks
+		applyLayerMaskIfNeeded(view);
 
 		if (needsLayerAdjustmentOnScroll) {
 			registerAdjustLayersOnScrollListener(view);
@@ -168,10 +155,9 @@ export namespace ios {
 		}
 
 		const background: BackgroundDefinition = view.style.backgroundInternal;
-		const hasGradientBackground: boolean = background.image && background.image instanceof LinearGradient;
 
 		if (!background.clipPath) {
-			clearLayerMask(nativeView);
+			clearLayerMask(view);
 		}
 
 		// Clear box shadow if it's no longer needed
@@ -190,9 +176,15 @@ export namespace ios {
 			}
 		}
 
-		if (nativeView.gradientLayer && !hasGradientBackground) {
-			nativeView.gradientLayer.removeFromSuperlayer();
-			nativeView.gradientLayer = null;
+		if (nativeView.gradientLayer) {
+			if (background.image && background.image instanceof LinearGradient) {
+				if (nativeView.gradientLayer.mask && background.hasUniformBorderRadius()) {
+					nativeView.gradientLayer.mask = null;
+				}
+			} else {
+				nativeView.gradientLayer.removeFromSuperlayer();
+				nativeView.gradientLayer = null;
+			}
 		}
 
 		// Force unset scroll listener
@@ -321,79 +313,91 @@ export namespace ios {
 			shadowPath,
 		};
 	}
+}
 
-	export function generateClipPath(view: View, bounds: CGRect): UIBezierPath {
-		const background = view.style.backgroundInternal;
-		const { origin, size } = bounds;
+function getUniformBorderRadius(view: View, bounds: CGRect): number {
+	const background = view.style.backgroundInternal;
+	const uniformBorderRadius = background.getUniformBorderRadius();
 
-		const position = {
-			left: origin.x,
-			top: origin.y,
-			bottom: size.height,
-			right: size.width,
-		};
+	if (uniformBorderRadius <= 0) {
+		return 0;
+	}
 
-		if (position.right === 0 || position.bottom === 0) {
-			return;
+	const { width, height } = bounds.size;
+	const cornerRadius = layout.toDeviceIndependentPixels(uniformBorderRadius);
+
+	return Math.min(Math.min(width / 2, height / 2), cornerRadius);
+}
+
+function generateClipPath(view: View, bounds: CGRect): UIBezierPath {
+	const background = view.style.backgroundInternal;
+	const { origin, size } = bounds;
+
+	const position = {
+		left: origin.x,
+		top: origin.y,
+		bottom: size.height,
+		right: size.width,
+	};
+
+	if (position.right === 0 || position.bottom === 0) {
+		return;
+	}
+
+	let path: UIBezierPath;
+	const clipPath = background.clipPath;
+
+	if (clipPath instanceof ClipPathFunction) {
+		switch (clipPath.shape) {
+			case 'rect':
+				path = rectPath(clipPath.rule, position);
+				break;
+			case 'inset':
+				path = insetPath(clipPath.rule, position);
+				break;
+			case 'circle':
+				path = circlePath(clipPath.rule, position);
+				break;
+			case 'ellipse':
+				path = ellipsePath(clipPath.rule, position);
+				break;
+			case 'polygon':
+				path = polygonPath(clipPath.rule, position);
+				break;
 		}
+	} else {
+		path = null;
+	}
 
-		let path: UIBezierPath;
-		const clipPath = background.clipPath;
+	return path;
+}
 
-		if (clipPath instanceof ClipPathFunction) {
-			switch (clipPath.shape) {
-				case 'rect':
-					path = rectPath(clipPath.rule, position);
-					break;
-				case 'inset':
-					path = insetPath(clipPath.rule, position);
-					break;
-				case 'circle':
-					path = circlePath(clipPath.rule, position);
-					break;
-				case 'ellipse':
-					path = ellipsePath(clipPath.rule, position);
-					break;
-				case 'polygon':
-					path = polygonPath(clipPath.rule, position);
-					break;
-			}
+function applyLayerMaskIfNeeded(view: View): void {
+	const background = view.style.backgroundInternal;
+	const nativeView = <NativeScriptUIView>view.nativeViewProtected;
+	const layer = nativeView.layer;
+	let maskPath: UIBezierPath = null;
+
+	if (background.clipPath) {
+		maskPath = generateClipPath(view, layer.bounds);
+	}
+
+	if (maskPath) {
+		if (layer.mask instanceof CAShapeLayer) {
+			layer.mask.path = maskPath;
 		} else {
-			path = null;
+			const mask = CAShapeLayer.new();
+			mask.path = maskPath;
+
+			nativeView.originalMask = layer.mask;
+			layer.mask = mask;
 		}
-
-		return path;
-	}
-
-	export function getUniformBorderRadius(view: View, bounds: CGRect): number {
-		const background = view.style.backgroundInternal;
-		const uniformBorderRadius = background.getUniformBorderRadius();
-
-		if (uniformBorderRadius <= 0) {
-			return 0;
-		}
-
-		const { width, height } = bounds.size;
-		const cornerRadius = layout.toDeviceIndependentPixels(uniformBorderRadius);
-
-		return Math.min(Math.min(width / 2, height / 2), cornerRadius);
-	}
-
-	export function generateNonUniformBorderInnerClipRoundedPath(view: View, bounds: CGRect): any {
-		const background = view.style.backgroundInternal;
-
-		const cappedOuterRadii = calculateNonUniformBorderCappedRadii(bounds, background);
-		return generateNonUniformBorderInnerClipPath(bounds, background, cappedOuterRadii);
-	}
-
-	export function generateNonUniformMultiColorBorderRoundedPaths(view: View, bounds: CGRect): Array<any> {
-		const background = view.style.backgroundInternal;
-
-		return generateNonUniformMultiColorBorderPaths(bounds, background);
 	}
 }
 
-function clearLayerMask(nativeView: NativeScriptUIView) {
+function clearLayerMask(view: View): void {
+	const nativeView = <NativeScriptUIView>view.nativeViewProtected;
+
 	nativeView.layer.mask = nativeView.originalMask;
 	nativeView.originalMask = null;
 }
@@ -743,7 +747,6 @@ function getBorderCapRadius(a: number, b: number, c: number): number {
 
 function calculateNonUniformBorderCappedRadii(bounds: CGRect, background: BackgroundDefinition): CappedOuterRadii {
 	const { width, height } = bounds.size;
-	const { x, y } = bounds.origin;
 
 	const outerTopLeftRadius = layout.toDeviceIndependentPixels(background.borderTopLeftRadius);
 	const outerTopRightRadius = layout.toDeviceIndependentPixels(background.borderTopRightRadius);

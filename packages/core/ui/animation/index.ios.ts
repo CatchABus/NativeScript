@@ -6,7 +6,7 @@ import { Trace } from '../../trace';
 import { opacityProperty, backgroundColorProperty, rotateProperty, rotateXProperty, rotateYProperty, translateXProperty, translateYProperty, scaleXProperty, scaleYProperty, heightProperty, widthProperty } from '../styling/style-properties';
 import { PercentLength } from '../styling/length-shared';
 import { ios as iosBackground } from '../styling/background';
-import { ios as iosViewUtils, NativeScriptUIView } from '../utils';
+import { NativeScriptUIView } from '../utils';
 
 import { ios as iosHelper } from '../../utils/native-helper';
 
@@ -745,100 +745,6 @@ export class Animation extends AnimationBase {
 		// Gradient background animation
 		if (nativeView.gradientLayer) {
 			nativeView.gradientLayer.addAnimationForKey(nativeAnimation, 'bounds');
-		}
-
-		// Clipping mask animation
-		if (view.style.backgroundInternal.clipPath && nativeView.layer.mask instanceof CAShapeLayer) {
-			nativeView.layer.mask.addAnimationForKey(
-				this._createBasicAnimation(
-					{
-						...args,
-						propertyNameToAnimate: 'path',
-						fromValue: nativeView.layer.mask.path,
-						toValue: iosBackground.generateClipPath(view, bounds),
-					},
-					animation,
-				),
-				'path',
-			);
-		}
-
-		// Border animations (uniform and non-uniform)
-		if (nativeView.hasNonUniformBorder) {
-			if (nativeView.borderLayer) {
-				const innerClipPath = iosBackground.generateNonUniformBorderInnerClipRoundedPath(animation.target, bounds);
-
-				if (nativeView.hasNonUniformBorderColor) {
-					const borderMask = nativeView.borderLayer.mask;
-					if (borderMask instanceof CAShapeLayer) {
-						borderMask.addAnimationForKey(
-							this._createBasicAnimation(
-								{
-									...args,
-									propertyNameToAnimate: 'path',
-									fromValue: borderMask.path,
-									toValue: innerClipPath,
-								},
-								animation,
-							),
-							'path',
-						);
-					}
-
-					const borderLayers = nativeView.borderLayer.sublayers;
-					if (borderLayers?.count) {
-						const paths = iosBackground.generateNonUniformMultiColorBorderRoundedPaths(animation.target, bounds);
-
-						for (let i = 0, count = borderLayers.count; i < count; i++) {
-							const layer = nativeView.borderLayer.sublayers[i];
-							if (layer instanceof CAShapeLayer) {
-								layer.addAnimationForKey(
-									this._createBasicAnimation(
-										{
-											...args,
-											propertyNameToAnimate: 'path',
-											fromValue: layer.path,
-											toValue: paths[i],
-										},
-										animation,
-									),
-									'path',
-								);
-							}
-						}
-					}
-				} else {
-					nativeView.borderLayer.addAnimationForKey(
-						this._createBasicAnimation(
-							{
-								...args,
-								propertyNameToAnimate: 'path',
-								fromValue: nativeView.borderLayer.path,
-								toValue: innerClipPath,
-							},
-							animation,
-						),
-						'path',
-					);
-				}
-			}
-		} else {
-			// TODO: Animate border width when borders get support for percentage values
-			// Uniform corner radius also relies on view size
-			if (nativeView.layer.cornerRadius) {
-				nativeView.layer.addAnimationForKey(
-					this._createBasicAnimation(
-						{
-							...args,
-							propertyNameToAnimate: 'cornerRadius',
-							fromValue: nativeView.layer.cornerRadius,
-							toValue: iosBackground.getUniformBorderRadius(animation.target, bounds),
-						},
-						animation,
-					),
-					'cornerRadius',
-				);
-			}
 		}
 
 		if (nativeView.outerShadowContainerLayer) {
