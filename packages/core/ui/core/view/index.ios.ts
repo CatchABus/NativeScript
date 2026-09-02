@@ -15,7 +15,6 @@ import { IOSPostAccessibilityNotificationType, AccessibilityEventOptions, Access
 import { CoreTypes } from '../../../core-types';
 import type { ModalTransition } from '../../transition/modal-transition';
 import { SharedTransition } from '../../transition/shared-transition';
-import { NativeScriptUIView } from '../../utils';
 import { Color } from '../../../color';
 
 export * from './view-common';
@@ -413,7 +412,6 @@ export class View extends ViewCommon {
 		const scaleX = this.scaleX || 1e-6;
 		const scaleY = this.scaleY || 1e-6;
 		const perspective = this.perspective || 300;
-		const nativeView: NativeScriptUIView = <NativeScriptUIView>this.nativeViewProtected;
 
 		let transform = new CATransform3D(CATransform3DIdentity);
 
@@ -445,7 +443,7 @@ export class View extends ViewCommon {
 	}
 
 	public updateOriginPoint(originX: number, originY: number) {
-		const nativeView: NativeScriptUIView = <NativeScriptUIView>this.nativeViewProtected;
+		const nativeView = this.nativeViewProtected;
 		const newPoint = CGPointMake(originX, originY);
 
 		// Disable CALayer animatable property changes
@@ -771,23 +769,20 @@ export class View extends ViewCommon {
 		return this.nativeViewProtected.hidden;
 	}
 	[hiddenProperty.setNative](value: boolean) {
-		const nativeView: NativeScriptUIView = <NativeScriptUIView>this.nativeViewProtected;
-		nativeView.hidden = value;
+		this.nativeViewProtected.hidden = value;
 	}
 
 	[visibilityProperty.getDefault](): CoreTypes.VisibilityType {
 		return this.nativeViewProtected.hidden ? CoreTypes.Visibility.collapse : CoreTypes.Visibility.visible;
 	}
 	[visibilityProperty.setNative](value: CoreTypes.VisibilityType) {
-		const nativeView: NativeScriptUIView = <NativeScriptUIView>this.nativeViewProtected;
-
 		switch (value) {
 			case CoreTypes.Visibility.visible:
-				nativeView.hidden = false;
+				this.nativeViewProtected.hidden = false;
 				break;
 			case CoreTypes.Visibility.hidden:
 			case CoreTypes.Visibility.collapse:
-				nativeView.hidden = true;
+				this.nativeViewProtected.hidden = true;
 				break;
 			default:
 				throw new Error(`Invalid visibility value: ${value}. Valid values are: "${CoreTypes.Visibility.visible}", "${CoreTypes.Visibility.hidden}", "${CoreTypes.Visibility.collapse}".`);
@@ -798,7 +793,6 @@ export class View extends ViewCommon {
 		return this.nativeViewProtected.alpha;
 	}
 	[opacityProperty.setNative](value: number) {
-		const nativeView: NativeScriptUIView = <NativeScriptUIView>this.nativeViewProtected;
 		const updateSuspended = this._isPresentationLayerUpdateSuspended();
 		if (!updateSuspended) {
 			CATransaction.begin();
@@ -806,7 +800,7 @@ export class View extends ViewCommon {
 		// Disable CALayer animatable property changes
 		CATransaction.setDisableActions(true);
 
-		nativeView.alpha = value;
+		this.nativeViewProtected.alpha = value;
 
 		CATransaction.setDisableActions(false);
 		if (!updateSuspended) {

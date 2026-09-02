@@ -1,4 +1,3 @@
-import type { NativeScriptUIView } from '../../utils';
 import { supportsGlass } from '../../../utils/constants';
 import { type GlassEffectType, type GlassEffectVariant, iosGlassEffectProperty, View } from '../../core/view';
 import { LiquidGlassCommon } from './liquid-glass-common';
